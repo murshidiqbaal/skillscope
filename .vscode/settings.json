@@ -1,0 +1,11 @@
+{
+    "python.analysis.extraPaths": [
+        "./skill_scope_ai/backend"
+    ],
+    "python.autoComplete.extraPaths": [
+        "./skill_scope_ai/backend"
+    ],
+    "python.analysis.extraPaths": [
+        "./"
+    ]
+}
