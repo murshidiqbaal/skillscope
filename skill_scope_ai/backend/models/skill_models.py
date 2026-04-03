@@ -1,28 +1,11 @@
-"""
-models/skill_models.py
-Pydantic models for the skills catalog and paginated response.
-"""
-
-from typing import List, Optional
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
+from typing import Optional
 
 
-class SkillModel(BaseModel):
-    """Represents a single skill entry from the Supabase `skills` table."""
-
-    id: str
-    name: str
-    description: str
-    category: str
-    demand_score: float
-    growth_rate: Optional[float] = None
-    icon_url: Optional[str] = None
-    tags: List[str] = []
-    created_at: Optional[str] = None
-
-
-class PaginatedSkillsResponse(BaseModel):
-    """Paginated response envelope for GET /skills."""
-
-    skills: List[SkillModel]
-    total: int
+class Skill(BaseModel):
+    id: str = Field(..., description="Unique skill ID")
+    name: str = Field(..., description="Skill name (e.g. Flutter)")
+    category: str = Field(..., description="Skill category (e.g. Mobile)")
+    demand_score: int = Field(..., description="Current demand score (0-100)")
+    growth_rate: int = Field(..., description="Year-over-year growth percentage")
+    description: Optional[str] = Field(default=None, description="Short skill description")

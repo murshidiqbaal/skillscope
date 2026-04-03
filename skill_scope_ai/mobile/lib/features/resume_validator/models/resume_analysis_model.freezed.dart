@@ -849,7 +849,7 @@ as String,
 /// @nodoc
 mixin _$JobRoleSkills {
 
- String get roleId; String get roleName; List<String> get requiredSkills; String? get description; String? get category;
+ String get role; List<String> get skills;
 /// Create a copy of JobRoleSkills
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -862,16 +862,16 @@ $JobRoleSkillsCopyWith<JobRoleSkills> get copyWith => _$JobRoleSkillsCopyWithImp
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is JobRoleSkills&&(identical(other.roleId, roleId) || other.roleId == roleId)&&(identical(other.roleName, roleName) || other.roleName == roleName)&&const DeepCollectionEquality().equals(other.requiredSkills, requiredSkills)&&(identical(other.description, description) || other.description == description)&&(identical(other.category, category) || other.category == category));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is JobRoleSkills&&(identical(other.role, role) || other.role == role)&&const DeepCollectionEquality().equals(other.skills, skills));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,roleId,roleName,const DeepCollectionEquality().hash(requiredSkills),description,category);
+int get hashCode => Object.hash(runtimeType,role,const DeepCollectionEquality().hash(skills));
 
 @override
 String toString() {
-  return 'JobRoleSkills(roleId: $roleId, roleName: $roleName, requiredSkills: $requiredSkills, description: $description, category: $category)';
+  return 'JobRoleSkills(role: $role, skills: $skills)';
 }
 
 
@@ -882,7 +882,7 @@ abstract mixin class $JobRoleSkillsCopyWith<$Res>  {
   factory $JobRoleSkillsCopyWith(JobRoleSkills value, $Res Function(JobRoleSkills) _then) = _$JobRoleSkillsCopyWithImpl;
 @useResult
 $Res call({
- String roleId, String roleName, List<String> requiredSkills, String? description, String? category
+ String role, List<String> skills
 });
 
 
@@ -899,14 +899,11 @@ class _$JobRoleSkillsCopyWithImpl<$Res>
 
 /// Create a copy of JobRoleSkills
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? roleId = null,Object? roleName = null,Object? requiredSkills = null,Object? description = freezed,Object? category = freezed,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? role = null,Object? skills = null,}) {
   return _then(_self.copyWith(
-roleId: null == roleId ? _self.roleId : roleId // ignore: cast_nullable_to_non_nullable
-as String,roleName: null == roleName ? _self.roleName : roleName // ignore: cast_nullable_to_non_nullable
-as String,requiredSkills: null == requiredSkills ? _self.requiredSkills : requiredSkills // ignore: cast_nullable_to_non_nullable
-as List<String>,description: freezed == description ? _self.description : description // ignore: cast_nullable_to_non_nullable
-as String?,category: freezed == category ? _self.category : category // ignore: cast_nullable_to_non_nullable
-as String?,
+role: null == role ? _self.role : role // ignore: cast_nullable_to_non_nullable
+as String,skills: null == skills ? _self.skills : skills // ignore: cast_nullable_to_non_nullable
+as List<String>,
   ));
 }
 
@@ -991,10 +988,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String roleId,  String roleName,  List<String> requiredSkills,  String? description,  String? category)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String role,  List<String> skills)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _JobRoleSkills() when $default != null:
-return $default(_that.roleId,_that.roleName,_that.requiredSkills,_that.description,_that.category);case _:
+return $default(_that.role,_that.skills);case _:
   return orElse();
 
 }
@@ -1012,10 +1009,10 @@ return $default(_that.roleId,_that.roleName,_that.requiredSkills,_that.descripti
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String roleId,  String roleName,  List<String> requiredSkills,  String? description,  String? category)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String role,  List<String> skills)  $default,) {final _that = this;
 switch (_that) {
 case _JobRoleSkills():
-return $default(_that.roleId,_that.roleName,_that.requiredSkills,_that.description,_that.category);case _:
+return $default(_that.role,_that.skills);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -1032,10 +1029,10 @@ return $default(_that.roleId,_that.roleName,_that.requiredSkills,_that.descripti
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String roleId,  String roleName,  List<String> requiredSkills,  String? description,  String? category)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String role,  List<String> skills)?  $default,) {final _that = this;
 switch (_that) {
 case _JobRoleSkills() when $default != null:
-return $default(_that.roleId,_that.roleName,_that.requiredSkills,_that.description,_that.category);case _:
+return $default(_that.role,_that.skills);case _:
   return null;
 
 }
@@ -1047,20 +1044,17 @@ return $default(_that.roleId,_that.roleName,_that.requiredSkills,_that.descripti
 @JsonSerializable()
 
 class _JobRoleSkills implements JobRoleSkills {
-  const _JobRoleSkills({required this.roleId, required this.roleName, final  List<String> requiredSkills = const [], this.description, this.category}): _requiredSkills = requiredSkills;
+  const _JobRoleSkills({required this.role, final  List<String> skills = const []}): _skills = skills;
   factory _JobRoleSkills.fromJson(Map<String, dynamic> json) => _$JobRoleSkillsFromJson(json);
 
-@override final  String roleId;
-@override final  String roleName;
- final  List<String> _requiredSkills;
-@override@JsonKey() List<String> get requiredSkills {
-  if (_requiredSkills is EqualUnmodifiableListView) return _requiredSkills;
+@override final  String role;
+ final  List<String> _skills;
+@override@JsonKey() List<String> get skills {
+  if (_skills is EqualUnmodifiableListView) return _skills;
   // ignore: implicit_dynamic_type
-  return EqualUnmodifiableListView(_requiredSkills);
+  return EqualUnmodifiableListView(_skills);
 }
 
-@override final  String? description;
-@override final  String? category;
 
 /// Create a copy of JobRoleSkills
 /// with the given fields replaced by the non-null parameter values.
@@ -1075,16 +1069,16 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _JobRoleSkills&&(identical(other.roleId, roleId) || other.roleId == roleId)&&(identical(other.roleName, roleName) || other.roleName == roleName)&&const DeepCollectionEquality().equals(other._requiredSkills, _requiredSkills)&&(identical(other.description, description) || other.description == description)&&(identical(other.category, category) || other.category == category));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _JobRoleSkills&&(identical(other.role, role) || other.role == role)&&const DeepCollectionEquality().equals(other._skills, _skills));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,roleId,roleName,const DeepCollectionEquality().hash(_requiredSkills),description,category);
+int get hashCode => Object.hash(runtimeType,role,const DeepCollectionEquality().hash(_skills));
 
 @override
 String toString() {
-  return 'JobRoleSkills(roleId: $roleId, roleName: $roleName, requiredSkills: $requiredSkills, description: $description, category: $category)';
+  return 'JobRoleSkills(role: $role, skills: $skills)';
 }
 
 
@@ -1095,7 +1089,7 @@ abstract mixin class _$JobRoleSkillsCopyWith<$Res> implements $JobRoleSkillsCopy
   factory _$JobRoleSkillsCopyWith(_JobRoleSkills value, $Res Function(_JobRoleSkills) _then) = __$JobRoleSkillsCopyWithImpl;
 @override @useResult
 $Res call({
- String roleId, String roleName, List<String> requiredSkills, String? description, String? category
+ String role, List<String> skills
 });
 
 
@@ -1112,14 +1106,11 @@ class __$JobRoleSkillsCopyWithImpl<$Res>
 
 /// Create a copy of JobRoleSkills
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? roleId = null,Object? roleName = null,Object? requiredSkills = null,Object? description = freezed,Object? category = freezed,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? role = null,Object? skills = null,}) {
   return _then(_JobRoleSkills(
-roleId: null == roleId ? _self.roleId : roleId // ignore: cast_nullable_to_non_nullable
-as String,roleName: null == roleName ? _self.roleName : roleName // ignore: cast_nullable_to_non_nullable
-as String,requiredSkills: null == requiredSkills ? _self._requiredSkills : requiredSkills // ignore: cast_nullable_to_non_nullable
-as List<String>,description: freezed == description ? _self.description : description // ignore: cast_nullable_to_non_nullable
-as String?,category: freezed == category ? _self.category : category // ignore: cast_nullable_to_non_nullable
-as String?,
+role: null == role ? _self.role : role // ignore: cast_nullable_to_non_nullable
+as String,skills: null == skills ? _self._skills : skills // ignore: cast_nullable_to_non_nullable
+as List<String>,
   ));
 }
 

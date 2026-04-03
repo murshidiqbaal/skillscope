@@ -1,42 +1,53 @@
-/// Model representing a single chat message in the conversation.
-/// 
-/// [sender] can be 'user' or 'ai'.
-/// [isError] indicates if the message represents a failure or error notification.
-class ChatMessageModel {
-  final String id;
-  final String userId;
-  final String message;
-  final String sender; // 'user' or 'ai'
-  final bool isError;
-  final DateTime createdAt;
+import 'package:freezed_annotation/freezed_annotation.dart';
 
-  const ChatMessageModel({
-    required this.id,
-    required this.userId,
-    required this.message,
-    required this.sender,
-    this.isError = false,
-    required this.createdAt,
-  });
+part 'chat_message_model.freezed.dart';
+part 'chat_message_model.g.dart';
+
+@freezed
+class ChatMessageModel with _$ChatMessageModel {
+  const ChatMessageModel._();
+
+  const factory ChatMessageModel({
+    required String id,
+    @JsonKey(name: 'user_id') required String userId,
+    required String message,
+    required String sender, // 'user' or 'ai'
+    @JsonKey(name: 'is_error') @Default(false) bool isError,
+    @JsonKey(name: 'created_at') required DateTime createdAt,
+  }) = _ChatMessageModel;
+
+  bool get isUser => sender == 'user';
 
   factory ChatMessageModel.fromJson(Map<String, dynamic> json) =>
-      ChatMessageModel(
-        id: json['id'] as String? ?? '',
-        userId: json['user_id'] as String? ?? '',
-        message: json['message'] as String? ?? '',
-        sender: json['sender'] as String? ?? 'ai',
-        isError: json['is_error'] as bool? ?? false,
-        createdAt: json['created_at'] != null
-            ? DateTime.tryParse(json['created_at'] as String) ?? DateTime.now()
-            : DateTime.now(),
-      );
+      _$ChatMessageModelFromJson(json);
 
-  Map<String, dynamic> toJson() => {
-        'id': id,
-        'user_id': userId,
-        'message': message,
-        'sender': sender,
-        'is_error': isError,
-        'created_at': createdAt.toIso8601String(),
-      };
+  @override
+  // TODO: implement createdAt
+  DateTime get createdAt => throw UnimplementedError();
+
+  @override
+  // TODO: implement id
+  String get id => throw UnimplementedError();
+
+  @override
+  // TODO: implement isError
+  bool get isError => throw UnimplementedError();
+
+  @override
+  // TODO: implement message
+  String get message => throw UnimplementedError();
+
+  @override
+  // TODO: implement sender
+  String get sender => throw UnimplementedError();
+
+  @override
+  Map<String, dynamic> toJson() {
+    // TODO: implement toJson
+    throw UnimplementedError();
+  }
+
+  @override
+  // TODO: implement userId
+  String get userId => throw UnimplementedError();
 }

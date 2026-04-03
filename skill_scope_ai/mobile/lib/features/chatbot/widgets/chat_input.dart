@@ -1,87 +1,51 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_animate/flutter_animate.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-/// Premium Chat Input Widget
-///
-/// Features:
-/// - Glassmorphism input field
-/// - Animated focus border
-/// - Gradient send button
-/// - Loading state handling
 class ChatInput extends StatefulWidget {
-  final Function(String) onSend;
+  final void Function(String) onSend;
   final bool isLoading;
 
-  const ChatInput({Key? key, required this.onSend, this.isLoading = false})
-    : super(key: key);
+  const ChatInput({super.key, required this.onSend, this.isLoading = false});
 
   @override
   State<ChatInput> createState() => _ChatInputState();
 }
 
-class _ChatInputState extends State<ChatInput>
-    with SingleTickerProviderStateMixin {
-  late TextEditingController _controller;
-  late AnimationController _focusController;
-  late FocusNode _focusNode;
-  bool _isFocused = false;
+class _ChatInputState extends State<ChatInput> {
+  final TextEditingController _controller = TextEditingController();
+  final FocusNode _focusNode = FocusNode();
+  bool _hasText = false;
 
   @override
   void initState() {
     super.initState();
-    _controller = TextEditingController();
-    _focusController = AnimationController(
-      duration: const Duration(milliseconds: 300),
-      vsync: this,
-    );
-    _focusNode = FocusNode();
-    _focusNode.addListener(_handleFocusChange);
+    _controller.addListener(() {
+      final hasText = _controller.text.trim().isNotEmpty;
+      if (hasText != _hasText) setState(() => _hasText = hasText);
+    });
   }
 
   @override
   void dispose() {
     _controller.dispose();
-    _focusController.dispose();
-    _focusNode.removeListener(_handleFocusChange);
     _focusNode.dispose();
     super.dispose();
   }
 
-  void _handleFocusChange() {
-    setState(() => _isFocused = _focusNode.hasFocus);
-    if (_isFocused) {
-      _focusController.forward();
-    } else {
-      _focusController.reverse();
-    }
-  }
-
   void _handleSend() {
-    if (_controller.text.trim().isNotEmpty && !widget.isLoading) {
-      onSend(_controller.text);
-      _controller.clear();
-      _focusNode.unfocus();
-    }
-  }
-
-  void onSend(String text) {
+    final text = _controller.text.trim();
+    if (text.isEmpty || widget.isLoading) return;
     widget.onSend(text);
+    _controller.clear();
+    setState(() => _hasText = false);
   }
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [
-            Colors.transparent,
-            const Color(0xFF0F172A).withOpacity(0.8),
-          ],
-        ),
+        color: const Color(0xFF0F172A),
         border: Border(
           top: BorderSide(
             color: const Color(0xFF06B6D4).withOpacity(0.1),
@@ -89,130 +53,113 @@ class _ChatInputState extends State<ChatInput>
           ),
         ),
       ),
-      child: AnimatedBuilder(
-        animation: _focusController,
-        builder: (context, child) {
-          return Container(
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(14),
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [
-                  const Color(
-                    0xFF1E293B,
-                  ).withOpacity(0.5 + (0.3 * _focusController.value)),
-                  const Color(
-                    0xFF0F172A,
-                  ).withOpacity(0.7 + (0.2 * _focusController.value)),
-                ],
-              ),
-              border: Border.all(
-                color: Color.lerp(
-                  const Color(0xFF06B6D4).withOpacity(0.2),
-                  const Color(0xFF06B6D4).withOpacity(0.5),
-                  _focusController.value,
-                )!,
-                width: 1,
-              ),
-              boxShadow: [
-                if (_isFocused)
-                  BoxShadow(
-                    color: const Color(0xFF06B6D4).withOpacity(0.2),
-                    blurRadius: 20,
-                    offset: const Offset(0, 5),
-                  ),
-              ],
-            ),
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-            child: Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    controller: _controller,
-                    focusNode: _focusNode,
-                    enabled: !widget.isLoading,
-                    minLines: 1,
-                    maxLines: 4,
-                    style: GoogleFonts.plusJakartaSans(
-                      fontSize: 15,
-                      color: Colors.white,
-                      fontWeight: FontWeight.w500,
-                    ),
-                    decoration: InputDecoration(
-                      hintText: 'Ask about skills or career guidance...',
-                      hintStyle: TextStyle(
-                        color: Colors.grey[600],
-                        fontSize: 15,
-                        fontWeight: FontWeight.w400,
-                      ),
-                      border: InputBorder.none,
-                      contentPadding: const EdgeInsets.symmetric(vertical: 14),
-                    ),
-                    cursorColor: const Color(0xFF06B6D4),
-                    onChanged: (value) {
-                      setState(() {});
-                    },
-                  ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: [
+          // ── Text Field ───────────────────────────────────────────────────
+          Expanded(
+            child: Container(
+              constraints: const BoxConstraints(maxHeight: 120),
+              decoration: BoxDecoration(
+                color: const Color(0xFF1E293B),
+                borderRadius: BorderRadius.circular(24),
+                border: Border.all(
+                  color: _focusNode.hasFocus
+                      ? const Color(0xFF4F46E5).withOpacity(0.5)
+                      : const Color(0xFF06B6D4).withOpacity(0.1),
+                  width: 1,
                 ),
-                const SizedBox(width: 8),
-                // Send Button
-                _buildSendButton(),
-              ],
+              ),
+              child: TextField(
+                controller: _controller,
+                focusNode: _focusNode,
+                maxLines: null,
+                keyboardType: TextInputType.multiline,
+                textInputAction: TextInputAction.newline,
+                enabled: !widget.isLoading,
+                style: GoogleFonts.plusJakartaSans(
+                  fontSize: 14,
+                  color: Colors.white,
+                  fontWeight: FontWeight.w500,
+                  height: 1.5,
+                ),
+                decoration: InputDecoration(
+                  hintText: widget.isLoading
+                      ? 'SkillScope AI is thinking...'
+                      : 'Ask about skills, careers, or tech...',
+                  hintStyle: GoogleFonts.plusJakartaSans(
+                    fontSize: 14,
+                    color: Colors.grey[600],
+                    fontWeight: FontWeight.w400,
+                  ),
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 18,
+                    vertical: 12,
+                  ),
+                  border: InputBorder.none,
+                ),
+                onChanged: (_) => setState(() {}),
+                onSubmitted: (_) => _handleSend(),
+              ),
             ),
-          );
-        },
-      ),
-    );
-  }
+          ),
 
-  /// Build animated send button
-  Widget _buildSendButton() {
-    return Container(
-      width: 48,
-      height: 48,
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [const Color(0xFF4F46E5), const Color(0xFF8B5CF6)],
-        ),
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: const Color(0xFF4F46E5).withOpacity(0.3),
-            blurRadius: 15,
-            offset: const Offset(0, 8),
+          const SizedBox(width: 10),
+
+          // ── Send Button ──────────────────────────────────────────────────
+          AnimatedContainer(
+            duration: const Duration(milliseconds: 200),
+            width: 46,
+            height: 46,
+            decoration: BoxDecoration(
+              gradient: (_hasText && !widget.isLoading)
+                  ? const LinearGradient(
+                      colors: [Color(0xFF4F46E5), Color(0xFF7C3AED)],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    )
+                  : null,
+              color: (_hasText && !widget.isLoading)
+                  ? null
+                  : const Color(0xFF1E293B),
+              shape: BoxShape.circle,
+              boxShadow: (_hasText && !widget.isLoading)
+                  ? [
+                      BoxShadow(
+                        color: const Color(0xFF4F46E5).withOpacity(0.4),
+                        blurRadius: 10,
+                        offset: const Offset(0, 3),
+                      ),
+                    ]
+                  : null,
+            ),
+            child: Material(
+              color: Colors.transparent,
+              child: InkWell(
+                onTap: (_hasText && !widget.isLoading) ? _handleSend : null,
+                borderRadius: BorderRadius.circular(23),
+                child: Center(
+                  child: widget.isLoading
+                      ? SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                              Colors.grey[600]!,
+                            ),
+                          ),
+                        )
+                      : Icon(
+                          Icons.send_rounded,
+                          size: 18,
+                          color: _hasText ? Colors.white : Colors.grey[600],
+                        ),
+                ),
+              ),
+            ),
           ),
         ],
-      ),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: widget.isLoading ? null : _handleSend,
-          borderRadius: BorderRadius.circular(12),
-          child: Center(
-            child: widget.isLoading
-                ? SizedBox(
-                    width: 24,
-                    height: 24,
-                    child: CircularProgressIndicator(
-                      valueColor: const AlwaysStoppedAnimation<Color>(
-                        Colors.white,
-                      ),
-                      strokeWidth: 2.5,
-                    ),
-                  )
-                : const Icon(
-                    Icons.send_rounded,
-                    color: Colors.white,
-                    size: 20,
-                  ).animate().scaleXY(
-                    begin: 0.8,
-                    end: 1,
-                    duration: 300.ms,
-                    curve: Curves.elasticOut,
-                  ),
-          ),
-        ),
       ),
     );
   }

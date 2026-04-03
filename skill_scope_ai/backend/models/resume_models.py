@@ -1,48 +1,48 @@
-"""
-models/resume_models.py
-Pydantic models for resume analysis, job roles, and learning resources.
-"""
-
+from pydantic import BaseModel, Field
 from typing import List, Optional
-from pydantic import BaseModel
 
 
 class LearningResource(BaseModel):
-    """A single recommended learning resource."""
-
-    title: str
-    url: str
-    description: Optional[str] = None
-    platform: Optional[str] = None
+    title: str = Field(..., description="Title of the resource")
+    url: str = Field(..., description="Direct link to the resource")
+    description: Optional[str] = Field(default=None, description="Why it's recommended")
+    platform: Optional[str] = Field(default=None, description="Platform (e.g. Coursera)")
 
 
-class ResumeAnalysis(BaseModel):
-    """Full analysis result returned after scanning a resume."""
-
-    jobRole: str
-    matchScore: int
-    detectedSkills: List[str] = []
-    missingSkills: List[str] = []
-    recommendedResources: List[LearningResource] = []
-
-
-class ResumeAnalysisResponse(BaseModel):
-    """Top-level response envelope for POST /resume/validate."""
-
-    analysis: ResumeAnalysis
+class ResumeAnalyzeRequest(BaseModel):
+    job_role: str = Field(
+        ...,
+        description="The target job role to analyze the resume against",
+        example="Flutter Developer",
+    )
+    resume_text: str = Field(
+        ...,
+        description="The raw text extracted from the resume",
+        max_length=15000,
+    )
 
 
-class LearningResourcesRequest(BaseModel):
-    """Request body for POST /learning-resources."""
-
-    skills: List[str]
+class ResumeAnalyzeResponse(BaseModel):
+    jobRole: Optional[str] = Field(default=None, description="Echoed job role")
+    matchScore: int = Field(..., description="Match score between 0 and 100")
+    detectedSkills: List[str] = Field(..., description="List of skills detected in the resume")
+    missingSkills: List[str] = Field(..., description="List of missing skills for the job role")
+    recommendedResources: List[LearningResource] = Field(
+        default_factory=list, 
+        description="List of AI recommended learning resources"
+    )
+    model: Optional[str] = Field(default=None, description="The model used for analysis")
 
 
 class JobRoleSkills(BaseModel):
-    """Represents a job role with its required skill set."""
+    role: str = Field(..., description="The job role name")
+    skills: List[str] = Field(default_factory=list, description="List of required skills")
 
-    roleId: str
-    roleName: str
-    requiredSkills: List[str] = []
-    description: Optional[str] = None
-    category: Optional[str] = None
+
+class LearningResourceRequest(BaseModel):
+    skills: List[str] = Field(..., description="Skills to fetch resources for")
+
+
+class ErrorResponse(BaseModel):
+    detail: str = Field(..., description="Human-readable error description")
+    error_type: str = Field(..., description="Category of error")

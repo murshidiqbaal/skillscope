@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+
 import '../../../core/constants/app_constants.dart';
 import '../models/chat_message_model.dart';
 
@@ -8,20 +9,42 @@ class ChatApiService {
   final Dio _dio = Dio(BaseOptions(baseUrl: AppConstants.fastapiBaseUrl));
   final _supabase = Supabase.instance.client;
 
-  Future<String> sendMessage(String userId, String message) async {
+  Future<String> sendMessage(String message) async {
     try {
-      final response = await _dio.post('/chat', data: {
-        'user_id': userId,
-        'message': message,
-      });
+      final response = await _dio.post(
+        '/chat',
+        data: {'message': message},
+        options: Options(
+          sendTimeout: const Duration(seconds: 15),
+          receiveTimeout: const Duration(seconds: 15),
+        ),
+      );
 
       if (response.statusCode == 200) {
-        return response.data['response'];
+        // Add Debug Logs as requested
+        print('Backend Response Body: ${response.data}');
+
+        // Parse "reply" field as per new requirement
+        final botResponse = response.data['reply'];
+        if (botResponse == null) {
+          throw Exception('Backend returned empty response');
+        }
+        return botResponse.toString();
       } else {
-        throw Exception('Failed to get AI response');
+        throw Exception('Server returned ${response.statusCode}');
       }
+    } on DioException catch (e) {
+      String message = 'Connection failed';
+      if (e.type == DioExceptionType.connectionTimeout ||
+          e.type == DioExceptionType.receiveTimeout) {
+        message = 'Request timed out. Please try again.';
+      } else if (e.response?.data != null &&
+          e.response?.data['detail'] != null) {
+        message = e.response?.data['detail'];
+      }
+      throw Exception(message);
     } catch (e) {
-      throw Exception('Network error: $e');
+      throw Exception('Unexpected error: $e');
     }
   }
 
@@ -36,7 +59,7 @@ class ChatApiService {
   Future<List<ChatMessageModel>> getChatHistory(String userId) async {
     try {
       final response = await _dio.get('/chat/history/$userId');
-      
+
       if (response.statusCode == 200) {
         final List data = response.data;
         return data.map((json) => ChatMessageModel.fromJson(json)).toList();
@@ -50,8 +73,10 @@ class ChatApiService {
           .select()
           .eq('user_id', userId)
           .order('created_at', ascending: true);
-      
-      return (response as List).map((json) => ChatMessageModel.fromJson(json)).toList();
+
+      return (response as List)
+          .map((json) => ChatMessageModel.fromJson(json))
+          .toList();
     }
   }
 }

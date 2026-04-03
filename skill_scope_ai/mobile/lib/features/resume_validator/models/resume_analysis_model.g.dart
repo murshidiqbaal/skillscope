@@ -69,22 +69,13 @@ Map<String, dynamic> _$ResumeUploadRequestToJson(
 
 _JobRoleSkills _$JobRoleSkillsFromJson(Map<String, dynamic> json) =>
     _JobRoleSkills(
-      roleId: json['roleId'] as String,
-      roleName: json['roleName'] as String,
-      requiredSkills:
-          (json['requiredSkills'] as List<dynamic>?)
+      role: json['role'] as String,
+      skills:
+          (json['skills'] as List<dynamic>?)
               ?.map((e) => e as String)
               .toList() ??
           const [],
-      description: json['description'] as String?,
-      category: json['category'] as String?,
     );
 
 Map<String, dynamic> _$JobRoleSkillsToJson(_JobRoleSkills instance) =>
-    <String, dynamic>{
-      'roleId': instance.roleId,
-      'roleName': instance.roleName,
-      'requiredSkills': instance.requiredSkills,
-      'description': instance.description,
-      'category': instance.category,
-    };
+    <String, dynamic>{'role': instance.role, 'skills': instance.skills};

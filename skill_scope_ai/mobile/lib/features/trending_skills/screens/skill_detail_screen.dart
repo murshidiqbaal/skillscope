@@ -1,539 +1,263 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
-import 'package:mobile/features/trending_skills/models/skill_model.dart';
-import 'package:mobile/features/trending_skills/providers/skill_provider.dart';
-import 'package:mobile/features/trending_skills/widgets/resource_card_widget.dart';
-// import 'skill_model.dart';
-// import 'resource_model.dart';
-// import 'skills_provider.dart';
-// import 'resource_card.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:flutter_animate/flutter_animate.dart';
+import 'package:url_launcher/url_launcher.dart';
 
-/// Skill Detail Screen
-///
-/// Displays detailed information about a specific skill:
-/// - Skill overview (name, description, demand, growth)
-/// - Demand and growth visualizations
-/// - Learning resources
-/// - "Learn This Skill" button
-class SkillDetailScreen extends ConsumerStatefulWidget {
-  final String skillId;
-  final SkillModel? initialSkill;
+import '../models/skill_model.dart';
 
-  const SkillDetailScreen({Key? key, required this.skillId, this.initialSkill})
-    : super(key: key);
+class SkillDetailScreen extends StatelessWidget {
+  final SkillModel skill;
 
-  @override
-  ConsumerState<SkillDetailScreen> createState() => _SkillDetailScreenState();
-}
-
-class _SkillDetailScreenState extends ConsumerState<SkillDetailScreen> {
-  late ScrollController _scrollController;
-  late GlobalKey _resourcesKey;
-
-  @override
-  void initState() {
-    super.initState();
-    _scrollController = ScrollController();
-    _resourcesKey = GlobalKey();
-  }
-
-  @override
-  void dispose() {
-    _scrollController.dispose();
-    super.dispose();
-  }
-
-  void _scrollToResources() {
-    Future.delayed(const Duration(milliseconds: 300), () {
-      Scrollable.ensureVisible(
-        _resourcesKey.currentContext!,
-        duration: const Duration(milliseconds: 500),
-        curve: Curves.easeInOut,
-      );
-    });
-  }
+  const SkillDetailScreen({Key? key, required this.skill}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
-    final isMobile = MediaQuery.of(context).size.width < 600;
-    final skillAsync = ref.watch(skillDetailProvider(widget.skillId));
-
     return Scaffold(
-      appBar: AppBar(
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => context.pop(),
-        ),
-        actions: [
-          Consumer(
-            builder: (context, ref, child) {
-              final isFavorite = ref
-                  .watch(favoriteSkillsProvider)
-                  .contains(widget.skillId);
-
-              return IconButton(
-                icon: Icon(
-                  isFavorite ? Icons.favorite : Icons.favorite_border,
-                  color: isFavorite ? Colors.red : null,
-                ),
-                onPressed: () {
-                  ref
-                      .read(favoriteSkillsProvider.notifier)
-                      .toggleFavorite(widget.skillId);
-                },
-              );
-            },
+      backgroundColor: const Color(0xFF0F172A),
+      body: CustomScrollView(
+        physics: const BouncingScrollPhysics(),
+        slivers: [
+          _buildSliverAppBar(context),
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildHeader(),
+                  const SizedBox(height: 32),
+                  _buildStatsRow(),
+                  const SizedBox(height: 32),
+                  _buildDescription(),
+                  const SizedBox(height: 32),
+                  _buildResourcesList(),
+                  const SizedBox(height: 100),
+                ],
+              ),
+            ),
           ),
         ],
       ),
-      body: skillAsync.when(
-        loading: () => _buildLoadingState(isMobile),
-        error: (err, stack) => _buildErrorState(context),
-        data: (skill) {
-          if (skill == null) {
-            return _buildErrorState(context);
-          }
+    );
+  }
 
-          return SafeArea(
-            child: CustomScrollView(
-              controller: _scrollController,
-              slivers: [
-                // Header
-                SliverToBoxAdapter(
-                  child: _buildHeader(context, skill, isMobile),
+  Widget _buildSliverAppBar(BuildContext context) {
+    return SliverAppBar(
+      expandedHeight: 200,
+      backgroundColor: const Color(0xFF0F172A),
+      elevation: 0,
+      leading: IconButton(
+        icon: const Icon(Icons.arrow_back_ios_new, color: Colors.white),
+        onPressed: () => Navigator.pop(context),
+      ),
+      flexibleSpace: FlexibleSpaceBar(
+        background: Stack(
+          fit: StackFit.expand,
+          children: [
+            Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    const Color(0xFF4F46E5).withOpacity(0.4),
+                    const Color(0xFF0F172A),
+                  ],
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
                 ),
-
-                // Stats cards
-                SliverToBoxAdapter(
-                  child: _buildStatsCards(context, skill, isMobile),
-                ),
-
-                // Description
-                SliverToBoxAdapter(
-                  child: _buildDescription(context, skill, isMobile),
-                ),
-
-                // Learn button
-                SliverToBoxAdapter(
-                  child: Padding(
-                    padding: EdgeInsets.symmetric(
-                      horizontal: isMobile ? 16 : 20,
-                      vertical: 16,
-                    ),
-                    child: FilledButton.icon(
-                      onPressed: _scrollToResources,
-                      icon: const Icon(Icons.school),
-                      label: const Text('Learn This Skill'),
-                      style: FilledButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                      ),
-                    ),
-                  ),
-                ),
-
-                // Resources section
-                SliverToBoxAdapter(
-                  child: Padding(
-                    padding: EdgeInsets.symmetric(
-                      horizontal: isMobile ? 16 : 20,
-                      vertical: 8,
-                    ),
-                    child: Text(
-                      'Learning Resources',
-                      key: _resourcesKey,
-                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                ),
-                SliverToBoxAdapter(child: SizedBox(height: isMobile ? 12 : 16)),
-
-                // Resources list
-                Consumer(
-                  builder: (context, ref, child) {
-                    final resourcesAsync = ref.watch(
-                      skillResourcesProvider(widget.skillId),
-                    );
-
-                    return resourcesAsync.when(
-                      loading: () => SliverPadding(
-                        padding: EdgeInsets.symmetric(
-                          horizontal: isMobile ? 16 : 20,
-                        ),
-                        sliver: SliverList(
-                          delegate: SliverChildBuilderDelegate(
-                            (context, index) => const Padding(
-                              padding: EdgeInsets.only(bottom: 12),
-                              child: ResourceCardShimmer(),
-                            ),
-                            childCount: 3,
-                          ),
-                        ),
-                      ),
-                      error: (err, stack) => SliverToBoxAdapter(
-                        child: Padding(
-                          padding: EdgeInsets.symmetric(
-                            horizontal: isMobile ? 16 : 20,
-                          ),
-                          child: Center(
-                            child: Column(
-                              children: [
-                                Icon(
-                                  Icons.error_outline,
-                                  size: 48,
-                                  color: Theme.of(context).colorScheme.error,
-                                ),
-                                const SizedBox(height: 16),
-                                Text(
-                                  'Failed to load resources',
-                                  style: Theme.of(
-                                    context,
-                                  ).textTheme.titleMedium,
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ),
-                      data: (resources) {
-                        if (resources.isEmpty) {
-                          return SliverToBoxAdapter(
-                            child: Padding(
-                              padding: EdgeInsets.symmetric(
-                                horizontal: isMobile ? 16 : 20,
-                              ),
-                              child: Center(
-                                child: Column(
-                                  children: [
-                                    Icon(
-                                      Icons.library_books,
-                                      size: 48,
-                                      color: Theme.of(
-                                        context,
-                                      ).colorScheme.outline,
-                                    ),
-                                    const SizedBox(height: 16),
-                                    Text(
-                                      'No resources yet',
-                                      style: Theme.of(
-                                        context,
-                                      ).textTheme.titleMedium,
-                                    ),
-                                    const SizedBox(height: 8),
-                                    Text(
-                                      'Check back soon for learning materials',
-                                      style: Theme.of(context)
-                                          .textTheme
-                                          .bodyMedium
-                                          ?.copyWith(color: Colors.grey),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
-                          );
-                        }
-
-                        return SliverPadding(
-                          padding: EdgeInsets.symmetric(
-                            horizontal: isMobile ? 16 : 20,
-                          ),
-                          sliver: SliverList(
-                            delegate: SliverChildBuilderDelegate(
-                              (context, index) => Padding(
-                                padding: const EdgeInsets.only(bottom: 12),
-                                child: ResourceCard(resource: resources[index]),
-                              ),
-                              childCount: resources.length,
-                            ),
-                          ),
-                        );
-                      },
-                    );
-                  },
-                ),
-
-                // Bottom padding
-                SliverToBoxAdapter(child: SizedBox(height: isMobile ? 32 : 48)),
-              ],
+              ),
             ),
-          );
+            Center(
+              child: Icon(
+                _getCategoryIcon(skill.category),
+                size: 80,
+                color: Colors.white.withOpacity(0.2),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildHeader() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+          decoration: BoxDecoration(
+            color: const Color(0xFF4F46E5).withOpacity(0.1),
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Text(
+            skill.category,
+            style: GoogleFonts.plusJakartaSans(
+              color: const Color(0xFF4F46E5),
+              fontWeight: FontWeight.bold,
+              fontSize: 12,
+            ),
+          ),
+        ).animate().fadeIn(delay: 200.ms).slideX(begin: -0.2),
+        const SizedBox(height: 12),
+        Text(
+          skill.name,
+          style: GoogleFonts.plusJakartaSans(
+            fontSize: 32,
+            fontWeight: FontWeight.w800,
+            color: Colors.white,
+          ),
+        ).animate().fadeIn(delay: 300.ms).slideY(begin: 0.2),
+      ],
+    );
+  }
+
+  Widget _buildStatsRow() {
+    return Row(
+      children: [
+        _buildStatItem("Demand Score", "${skill.demandScore}%", Icons.trending_up, Colors.blue),
+        const SizedBox(width: 20),
+        _buildStatItem("Growth Rate", "+${skill.growthRate}%", Icons.auto_graph, Colors.green),
+      ],
+    ).animate().fadeIn(delay: 400.ms);
+  }
+
+  Widget _buildStatItem(String label, String value, IconData icon, Color color) {
+    return Expanded(
+      child: Container(
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: Colors.white.withOpacity(0.05),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: Colors.white.withOpacity(0.05)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(icon, color: color, size: 24),
+            const SizedBox(height: 12),
+            Text(
+              value,
+              style: GoogleFonts.plusJakartaSans(
+                fontSize: 24,
+                fontWeight: FontWeight.w800,
+                color: Colors.white,
+              ),
+            ),
+            Text(
+              label,
+              style: GoogleFonts.plusJakartaSans(
+                fontSize: 12,
+                color: Colors.white.withOpacity(0.4),
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDescription() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          "About this skill",
+          style: GoogleFonts.plusJakartaSans(
+            fontSize: 18,
+            fontWeight: FontWeight.w700,
+            color: Colors.white,
+          ),
+        ),
+        const SizedBox(height: 16),
+        Text(
+          skill.description ?? "No description available for this skill.",
+          style: GoogleFonts.plusJakartaSans(
+            fontSize: 15,
+            color: Colors.white.withOpacity(0.6),
+            height: 1.6,
+          ),
+        ),
+      ],
+    ).animate().fadeIn(delay: 500.ms);
+  }
+
+  Widget _buildResourcesList() {
+    final resources = [
+      {'title': 'Official Documentation', 'platform': 'System', 'url': 'https://google.com'},
+      {'title': 'Complete Masterclass', 'platform': 'Udemy', 'url': 'https://udemy.com'},
+      {'title': 'Crash Course for Beginners', 'platform': 'YouTube', 'url': 'https://youtube.com'},
+    ];
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          "Recommended Learning",
+          style: GoogleFonts.plusJakartaSans(
+            fontSize: 18,
+            fontWeight: FontWeight.w700,
+            color: Colors.white,
+          ),
+        ),
+        const SizedBox(height: 16),
+        ...resources.map((res) => _buildResourceCard(res)).toList(),
+      ],
+    ).animate().fadeIn(delay: 600.ms);
+  }
+
+  Widget _buildResourceCard(Map<String, String> res) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.03),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.white.withOpacity(0.05)),
+      ),
+      child: ListTile(
+        contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+        leading: Container(
+          padding: const EdgeInsets.all(10),
+          decoration: BoxDecoration(
+            color: const Color(0xFF4F46E5).withOpacity(0.1),
+            shape: BoxShape.circle,
+          ),
+          child: const Icon(Icons.menu_book_outlined, color: Color(0xFF4F46E5), size: 18),
+        ),
+        title: Text(
+          res['title']!,
+          style: GoogleFonts.plusJakartaSans(
+            color: Colors.white,
+            fontWeight: FontWeight.w700,
+            fontSize: 14,
+          ),
+        ),
+        subtitle: Text(
+          res['platform']!,
+          style: GoogleFonts.plusJakartaSans(
+            color: Colors.white.withOpacity(0.4),
+            fontSize: 12,
+          ),
+        ),
+        trailing: const Icon(Icons.open_in_new, color: Colors.white24, size: 16),
+        onTap: () async {
+          final uri = Uri.parse(res['url']!);
+          if (await canLaunchUrl(uri)) {
+            await launchUrl(uri);
+          }
         },
       ),
     );
   }
 
-  /// Build header section
-  Widget _buildHeader(BuildContext context, SkillModel skill, bool isMobile) {
-    return Padding(
-      padding: EdgeInsets.all(isMobile ? 16 : 20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Skill name
-          Text(
-            skill.name,
-            style: Theme.of(
-              context,
-            ).textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 8),
-
-          // Category and badge
-          Row(
-            children: [
-              Chip(
-                label: Text(skill.category),
-                materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-              ),
-              const SizedBox(width: 8),
-              if (skill.isTrending)
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 6,
-                  ),
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [Colors.orange[400]!, Colors.orange[600]!],
-                    ),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(
-                        Icons.trending_up,
-                        size: 14,
-                        color: Colors.white,
-                      ),
-                      const SizedBox(width: 4),
-                      Text(
-                        'Trending',
-                        style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                          color: Colors.white,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  /// Build stats cards
-  Widget _buildStatsCards(
-    BuildContext context,
-    SkillModel skill,
-    bool isMobile,
-  ) {
-    return Padding(
-      padding: EdgeInsets.symmetric(horizontal: isMobile ? 16 : 20),
-      child: Column(
-        children: [
-          Row(
-            children: [
-              Expanded(
-                child: _buildStatCard(
-                  context,
-                  'Demand Score',
-                  '${skill.demandScore}/100',
-                  skill.demandLevel,
-                  _getDemandColor(skill.demandScore),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: _buildStatCard(
-                  context,
-                  'Growth Rate',
-                  skill.growthTrend,
-                  skill.growthRate > 0 ? 'Rising' : 'Declining',
-                  skill.growthRate > 0 ? Colors.green : Colors.red,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          // Progress bar
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    'Market Demand',
-                    style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  Text(
-                    '${skill.demandScore}%',
-                    style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                      fontWeight: FontWeight.w600,
-                      color: _getDemandColor(skill.demandScore),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 8),
-              ClipRRect(
-                borderRadius: BorderRadius.circular(6),
-                child: LinearProgressIndicator(
-                  value: skill.demandScore / 100,
-                  minHeight: 8,
-                  backgroundColor: Colors.grey[300],
-                  valueColor: AlwaysStoppedAnimation<Color>(
-                    _getDemandColor(skill.demandScore),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  /// Build individual stat card
-  Widget _buildStatCard(
-    BuildContext context,
-    String label,
-    String value,
-    String subtitle,
-    Color color,
-  ) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(12),
-        color: color.withOpacity(0.1),
-        border: Border.all(color: color.withOpacity(0.3), width: 1),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            label,
-            style: Theme.of(
-              context,
-            ).textTheme.labelSmall?.copyWith(color: Colors.grey[600]),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            value,
-            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-              fontWeight: FontWeight.bold,
-              color: color,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            subtitle,
-            style: Theme.of(
-              context,
-            ).textTheme.labelSmall?.copyWith(color: color),
-          ),
-        ],
-      ),
-    );
-  }
-
-  /// Build description section
-  Widget _buildDescription(
-    BuildContext context,
-    SkillModel skill,
-    bool isMobile,
-  ) {
-    return Padding(
-      padding: EdgeInsets.symmetric(
-        horizontal: isMobile ? 16 : 20,
-        vertical: 16,
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'About This Skill',
-            style: Theme.of(
-              context,
-            ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 12),
-          Text(
-            skill.description.isEmpty
-                ? 'Learn one of the most in-demand skills in the job market today.'
-                : skill.description,
-            style: Theme.of(context).textTheme.bodyMedium,
-          ),
-        ],
-      ),
-    );
-  }
-
-  /// Build loading state
-  Widget _buildLoadingState(bool isMobile) {
-    return Padding(
-      padding: EdgeInsets.all(isMobile ? 16 : 20),
-      child: Column(
-        children: [
-          Container(
-            height: 40,
-            width: double.infinity,
-            color: Colors.grey[300],
-          ),
-          const SizedBox(height: 24),
-          Row(
-            children: [
-              Expanded(child: Container(height: 100, color: Colors.grey[300])),
-              const SizedBox(width: 12),
-              Expanded(child: Container(height: 100, color: Colors.grey[300])),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  /// Build error state
-  Widget _buildErrorState(BuildContext context) {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            Icons.error_outline,
-            size: 48,
-            color: Theme.of(context).colorScheme.error,
-          ),
-          const SizedBox(height: 16),
-          Text(
-            'Skill not found',
-            style: Theme.of(context).textTheme.titleLarge,
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'The skill you\'re looking for doesn\'t exist',
-            style: Theme.of(context).textTheme.bodyMedium,
-          ),
-        ],
-      ),
-    );
-  }
-
-  /// Get color based on demand score
-  Color _getDemandColor(int score) {
-    if (score >= 80) return Colors.green;
-    if (score >= 60) return Colors.orange;
-    if (score >= 40) return Colors.amber;
-    return Colors.red;
+  IconData _getCategoryIcon(String category) {
+    switch (category.toLowerCase()) {
+      case 'mobile': return Icons.phone_android;
+      case 'web': return Icons.language;
+      case 'ai': return Icons.psychology;
+      case 'backend': return Icons.storage;
+      case 'devops': return Icons.cloud_done;
+      default: return Icons.code;
+    }
   }
 }

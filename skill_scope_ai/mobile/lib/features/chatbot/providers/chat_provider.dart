@@ -55,27 +55,39 @@ class ChatNotifier extends StateNotifier<ChatState> {
   }
 
   Future<void> sendMessage(String text) async {
+    final trimmedText = text.trim();
+    if (trimmedText.isEmpty) return;
+
+    // Prevent multiple concurrent requests
+    if (state.isLoading) return;
+
     final user = Supabase.instance.client.auth.currentUser;
-    if (user == null) return;
+    if (user == null) {
+      state = state.copyWith(error: 'User not authenticated');
+      return;
+    }
 
     // Optimistic: show user message immediately
     final userMessage = ChatMessageModel(
       id: const Uuid().v4(),
       userId: user.id,
-      message: text,
+      message: trimmedText,
       sender: 'user',
       createdAt: DateTime.now(),
     );
-    state = state.copyWith(messages: [...state.messages, userMessage]);
-    
-    // Save optimistic user message to DB
+    state = state.copyWith(
+      messages: [...state.messages, userMessage],
+      isLoading: true,
+      error: null,
+    );
+
+    // Save optimistic user message to DB (non-blocking)
     _apiService.saveMessage(userMessage);
 
-    // Set thinking indicator
-    state = state.copyWith(isLoading: true);
-
     try {
-      final aiReply = await _apiService.sendMessage(user.id, text);
+      // Call updated API service (takes only text now)
+      final aiReply = await _apiService.sendMessage(trimmedText);
+
       final aiMessage = ChatMessageModel(
         id: const Uuid().v4(),
         userId: user.id,
@@ -83,18 +95,19 @@ class ChatNotifier extends StateNotifier<ChatState> {
         sender: 'ai',
         createdAt: DateTime.now(),
       );
+
       state = state.copyWith(
         messages: [...state.messages, aiMessage],
         isLoading: false,
       );
-      
-      // Save AI message to DB
+
+      // Save AI message to DB (non-blocking)
       _apiService.saveMessage(aiMessage);
     } catch (e) {
       final errorMessage = ChatMessageModel(
         id: const Uuid().v4(),
         userId: user.id,
-        message: 'Failed to get response: $e',
+        message: 'Bot Error: ${e.toString().replaceAll('Exception: ', '')}',
         sender: 'ai',
         isError: true,
         createdAt: DateTime.now(),
@@ -102,7 +115,7 @@ class ChatNotifier extends StateNotifier<ChatState> {
       state = state.copyWith(
         messages: [...state.messages, errorMessage],
         isLoading: false,
-        error: 'Connection error. Please try again.',
+        error: 'Failed to get response',
       );
     }
   }

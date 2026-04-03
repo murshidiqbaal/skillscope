@@ -1,182 +1,126 @@
-"""
-routers/resume.py
-Resume validation, job roles, and learning resources endpoints.
-"""
+import logging
+from fastapi import APIRouter, HTTPException, status, File, UploadFile, Form
 
-import sys
-import os
-
-sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
-
-import io
-from fastapi import APIRouter, File, Form, HTTPException, UploadFile
-from pypdf import PdfReader
-from models.resume_models import (
-    JobRoleSkills,
-    LearningResource,
-    LearningResourcesRequest,
-    ResumeAnalysis,
-    ResumeAnalysisResponse,
+from models.resume_models import ResumeAnalyzeRequest, ResumeAnalyzeResponse, ErrorResponse
+from services.groq_service import (
+    analyze_resume_ai,
+    GroqServiceError,
+    GroqAuthError,
+    GroqRateLimitError,
+    GroqTimeoutError,
 )
-from services.nlp_engine import nlp_engine
-from repositories.job_role_repository import job_role_repository
+from utils.document_parser import parse_resume
 
-router = APIRouter(tags=["Resume"])
+logger = logging.getLogger(__name__)
 
-_MAX_PDF_BYTES = 10 * 1024 * 1024  # 10 MB
-
-
-@router.post("/resume/validate", response_model=ResumeAnalysisResponse, status_code=200)
-async def validate_resume(
-    job_role: str = Form(...),
-    resume: UploadFile = File(...),
-) -> ResumeAnalysisResponse:
-    """
-    Upload a PDF resume and analyse it against a target job role using the local AI model.
-
-    Args:
-        job_role: The desired job role (multipart form field).
-        resume:   The uploaded PDF file (multipart form file).
-
-    Returns:
-        ResumeAnalysisResponse containing the full analysis.
-
-    Raises:
-        HTTPException 400: Non-PDF file or unreadable PDF.
-        HTTPException 413: File exceeds 10 MB limit.
-        HTTPException 500: Unexpected processing error.
-    """
-    # --- Validation: file type ---
-    filename = resume.filename or ""
-    if not filename.lower().endswith(".pdf"):
-        raise HTTPException(status_code=400, detail="Only PDF files are supported.")
-
-    # --- Validation: file size ---
-    content = await resume.read()
-    if len(content) > _MAX_PDF_BYTES:
-        raise HTTPException(
-            status_code=413,
-            detail="Resume file is too large. Max 10MB allowed.",
-        )
-
-    # --- Extract text from PDF ---
-    try:
-        pdf_reader = PdfReader(io.BytesIO(content))
-        pages_text = [page.extract_text() or "" for page in pdf_reader.pages]
-        full_text = "\n".join(pages_text).strip()
-    except Exception as exc:
-        raise HTTPException(
-            status_code=400, detail=f"Could not extract text from the PDF: {exc}"
-        ) from exc
-
-    if not full_text:
-        raise HTTPException(
-            status_code=400, detail="Could not extract text from the PDF."
-        )
-
-    # --- AI analysis ---
-    try:
-        result = await nlp_engine.analyze_resume(full_text, job_role)
-    except Exception as exc:
-        raise HTTPException(
-            status_code=500, detail=f"Error processing resume: {exc}"
-        ) from exc
-
-    # Ensure jobRole is present in the result dict.
-    result.setdefault("jobRole", job_role)
-
-    # Normalise recommendedResources to LearningResource objects.
-    raw_resources = result.get("recommendedResources", [])
-    resources = []
-    for item in raw_resources:
-        if isinstance(item, dict):
-            resources.append(
-                LearningResource(
-                    title=item.get("title", ""),
-                    url=item.get("url", ""),
-                    description=item.get("description"),
-                    platform=item.get("platform"),
-                )
-            )
-
-    analysis = ResumeAnalysis(
-        jobRole=result.get("jobRole", job_role),
-        matchScore=int(result.get("matchScore", 0)),
-        detectedSkills=result.get("detectedSkills", []),
-        missingSkills=result.get("missingSkills", []),
-        recommendedResources=resources,
-    )
-
-    return ResumeAnalysisResponse(analysis=analysis)
-
-
-@router.get("/job-roles", response_model=list[JobRoleSkills], status_code=200)
-async def get_job_roles() -> list[JobRoleSkills]:
-    """
-    Return all available job roles with their required skill sets.
-
-    Returns:
-        List of JobRoleSkills objects fetched from Supabase.
-
-    Raises:
-        HTTPException 500: Database or unexpected error.
-    """
-    try:
-        rows = await job_role_repository.get_all_job_roles()
-        result = []
-        for row in rows:
-            result.append(
-                JobRoleSkills(
-                    roleId=str(row.get("id", "")),
-                    roleName=row.get("role_name", ""),
-                    requiredSkills=row.get("required_skills") or [],
-                    description=row.get("description"),
-                    category=row.get("category"),
-                )
-            )
-        return result
-    except Exception as exc:
-        raise HTTPException(
-            status_code=500, detail=f"Error fetching job roles: {exc}"
-        ) from exc
+router = APIRouter(
+    prefix="/resume",
+    tags=["Resume Validator"],
+)
 
 
 @router.post(
-    "/learning-resources",
-    response_model=list[LearningResource],
-    status_code=200,
+    "/analyze",
+    response_model=ResumeAnalyzeResponse,
+    summary="Analyze resume text against a job role",
+    description=(
+        "Uses Groq AI to analyze matching capability for a specific job role. "
+        "Detects skills, missing keywords, and provides improvement suggestions."
+    ),
+    responses={
+        200: {"description": "Resume analyzed successfully"},
+    },
 )
-async def get_learning_resources(
-    request: LearningResourcesRequest,
-) -> list[LearningResource]:
+async def analyze_resume(request: ResumeAnalyzeRequest) -> ResumeAnalyzeResponse:
     """
-    Return learning resources matching any of the provided skill names.
-
-    Args:
-        request: JSON body with a `skills` list.
-
-    Returns:
-        List of LearningResource objects.
-
-    Raises:
-        HTTPException 400: Empty skills list.
-        HTTPException 500: Database or unexpected error.
+    Primary endpoint for text-based resume analysis using Groq.
     """
-    if not request.skills:
-        raise HTTPException(status_code=400, detail="Skills list must not be empty.")
+    logger.info(f"Text resume analysis request | role={request.job_role}")
+
+    # Text truncation for safety (llama3 limits)
+    resume_text = request.resume_text[:12000]
 
     try:
-        rows = await job_role_repository.get_resources_for_skills(request.skills)
-        return [
-            LearningResource(
-                title=row.get("title", ""),
-                url=row.get("url", ""),
-                description=row.get("description"),
-                platform=row.get("platform"),
-            )
-            for row in rows
-        ]
-    except Exception as exc:
+        # Call standalone async function from groq_service
+        result = await analyze_resume_ai(
+            resume_text=resume_text,
+            job_role=request.job_role,
+        )
+
+        return ResumeAnalyzeResponse(
+            jobRole=request.job_role,
+            matchScore=result.get("matchScore", 0),
+            detectedSkills=result.get("detectedSkills", []),
+            missingSkills=result.get("missingSkills", []),
+            recommendedResources=result.get("recommendedResources", []),
+            model=result.get("model"),
+        )
+
+    except Exception as e:
+        _handle_groq_exception(e)
+
+
+@router.post(
+    "/validate",
+    summary="Upload and analyze resume file against a job role",
+    description="Accepts PDF/Docx multipart upload and returns analysis in structured JSON.",
+)
+async def validate_resume(
+    job_role: str = Form(..., description="Target job role"),
+    resume: UploadFile = File(..., description="Resume file (PDF/Docx)"),
+):
+    """
+    Multipart endpoint for file-based resume analysis.
+    Returns format: {"analysis": ResumeAnalyzeResponse} matching Flutter expectations.
+    """
+    logger.info(f"File resume analysis request received | role={job_role} | file={resume.filename}")
+    
+    try:
+        # 1. Extract text from file
+        resume_text = await parse_resume(resume)
+        
+        # 2. Call AI service
+        result = await analyze_resume_ai(
+            resume_text=resume_text[:12000],
+            job_role=job_role
+        )
+        
+        # 3. Wrap in 'analysis' key (expected by Flutter ResumeApiService)
+        return {
+            "analysis": {
+                "jobRole": job_role,
+                "matchScore": result.get("matchScore", 0),
+                "detectedSkills": result.get("detectedSkills", []),
+                "missingSkills": result.get("missingSkills", []),
+                "recommendedResources": result.get("recommendedResources", []),
+                "model": result.get("model"),
+            }
+        }
+        
+    except Exception as e:
+        _handle_groq_exception(e)
+
+
+def _handle_groq_exception(e: Exception):
+    """Internal helper to convert service errors to Fast API exceptions."""
+    if isinstance(e, (GroqAuthError, GroqRateLimitError, GroqTimeoutError)):
+        logger.error(f"Groq API specific error: {e.message}")
         raise HTTPException(
-            status_code=500, detail=f"Error fetching learning resources: {exc}"
-        ) from exc
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail={"detail": f"AI Engine Error: {e.message}", "error_type": e.error_type}
+        )
+    elif isinstance(e, GroqServiceError):
+        logger.error(f"AI service error: {e.message}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail={"detail": e.message, "error_type": e.error_type}
+        )
+    else:
+        logger.exception(f"Unexpected error in resume analysis: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail={
+                "detail": "An unexpected error occurred during analysis.",
+                "error_type": "internal_error"
+            }
+        )

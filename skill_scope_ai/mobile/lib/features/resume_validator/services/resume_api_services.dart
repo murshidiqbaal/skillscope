@@ -1,19 +1,19 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 
+import '../../../core/constants/app_constants.dart';
 import '../models/resume_analysis_model.dart';
 
 /// Resume API Service for backend communication
 class ResumeApiService {
   final Dio _dio;
-  static const String baseUrl = 'http://localhost:8000';
-  static const Duration timeoutDuration = Duration(seconds: 30);
+  static const Duration timeoutDuration = Duration(seconds: 45); // Increased for Render spin-up
 
   ResumeApiService({Dio? dio})
       : _dio = dio ??
             Dio(
               BaseOptions(
-                baseUrl: baseUrl,
+                baseUrl: AppConstants.fastapiBaseUrl,
                 connectTimeout: timeoutDuration,
                 receiveTimeout: timeoutDuration,
                 sendTimeout: timeoutDuration,
@@ -83,8 +83,9 @@ class ResumeApiService {
 
       // Handle response
       if (response.statusCode == 200 && response.data != null) {
-        // The backend returns {'analysis': {'raw_analysis': '...'}} or similar.
-        // We need to parse the AI output. For now, I'll adjust the backend to return exactly what's needed.
+        // Add Debug logs
+        debugPrint('Resume Analysis Response: ${response.data}');
+
         final analysisData = response.data!['analysis'];
         
         // Add job role to response data if missing

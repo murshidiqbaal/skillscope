@@ -1,27 +1,18 @@
 import os
-from typing import List
-from pydantic_settings import BaseSettings, SettingsConfigDict
+from dotenv import load_dotenv
 
-# Get the directory where config.py is located
-current_dir = os.path.dirname(os.path.abspath(__file__))
-# Get the backend directory (one level up from core)
-backend_dir = os.path.dirname(current_dir)
-# Handle both root and backend directory as CWD
-env_path = os.path.join(backend_dir, ".env")
+load_dotenv()
 
-class Settings(BaseSettings):
+class Settings:
+    GROQ_API_KEY: str = os.getenv("GROQ_API_KEY", "")
+    GROQ_API_URL: str = "https://api.groq.com/openai/v1/chat/completions"
+    GROQ_MODEL: str = os.getenv("GROQ_MODEL", "llama-3.1-8b-instant")
+    REQUEST_TIMEOUT: int = int(os.getenv("REQUEST_TIMEOUT", "30"))
+    APP_TITLE: str = "SkillScope AI Backend"
+    APP_VERSION: str = "1.0.0"
 
-    SUPABASE_URL: str | None = None
-    SUPABASE_KEY: str | None = None
-
-    APP_NAME: str = "SkillScope AI Backend"
-    DEBUG: bool = False
-    ALLOWED_HOSTS: List[str] = ["*"]
-
-    OLLAMA_BASE_URL: str = "http://localhost:11434"
-    OLLAMA_MODEL: str = "phi3"
-
-    model_config = SettingsConfigDict(env_file=env_path, extra="ignore")
-
+    def validate(self):
+        if not self.GROQ_API_KEY:
+            raise ValueError("GROQ_API_KEY is not set. Check your .env file.")
 
 settings = Settings()

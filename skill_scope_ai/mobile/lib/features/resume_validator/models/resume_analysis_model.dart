@@ -111,35 +111,20 @@ class ResumeUploadRequest with _$ResumeUploadRequest {
 @freezed
 class JobRoleSkills with _$JobRoleSkills {
   const factory JobRoleSkills({
-    required String roleId,
-    required String roleName,
-    @Default([]) List<String> requiredSkills,
-    String? description,
-    String? category,
+    required String role,
+    @Default([]) List<String> skills,
   }) = _JobRoleSkills;
 
   factory JobRoleSkills.fromJson(Map<String, dynamic> json) =>
       _$JobRoleSkillsFromJson(json);
 
   @override
-  // TODO: implement category
-  String? get category => throw UnimplementedError();
+  // TODO: implement role
+  String get role => throw UnimplementedError();
 
   @override
-  // TODO: implement description
-  String? get description => throw UnimplementedError();
-
-  @override
-  // TODO: implement requiredSkills
-  List<String> get requiredSkills => throw UnimplementedError();
-
-  @override
-  // TODO: implement roleId
-  String get roleId => throw UnimplementedError();
-
-  @override
-  // TODO: implement roleName
-  String get roleName => throw UnimplementedError();
+  // TODO: implement skills
+  List<String> get skills => throw UnimplementedError();
 
   @override
   Map<String, dynamic> toJson() {

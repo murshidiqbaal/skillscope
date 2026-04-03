@@ -6,8 +6,8 @@ import 'package:google_fonts/google_fonts.dart';
 import '../providers/chat_provider.dart';
 import '../widgets/chat_input.dart';
 import '../widgets/chat_message_bubble.dart';
-import '../widgets/type_indicator.dart';
 import '../widgets/suggestion_chip.dart';
+import '../widgets/type_indicator.dart';
 
 /// Premium Animated AI Chatbot Screen
 class ChatbotScreen extends ConsumerStatefulWidget {
@@ -55,10 +55,23 @@ class _ChatbotScreenState extends ConsumerState<ChatbotScreen> {
     final chatState = ref.watch(chatProvider);
     final isMobile = MediaQuery.of(context).size.width < 600;
 
-    // Auto scroll on new messages
-    if (chatState.messages.isNotEmpty) {
-      _scrollToBottom();
-    }
+    // Listen for errors to show snackbar
+    ref.listen<ChatState>(chatProvider, (previous, next) {
+      if (next.error != null && next.error != previous?.error) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(next.error!),
+            backgroundColor: Colors.redAccent,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+
+      // Scroll to bottom when new messages arrive
+      if (next.messages.length > (previous?.messages.length ?? 0)) {
+        _scrollToBottom();
+      }
+    });
 
     return Scaffold(
       backgroundColor: const Color(0xFF0F172A),
@@ -79,52 +92,72 @@ class _ChatbotScreenState extends ConsumerState<ChatbotScreen> {
                       controller: _scrollController,
                       physics: const BouncingScrollPhysics(),
                       padding: EdgeInsets.all(isMobile ? 16 : 20),
-                      itemCount: chatState.messages.length + (chatState.isLoading ? 1 : 0),
+                      itemCount:
+                          chatState.messages.length +
+                          (chatState.isLoading ? 1 : 0),
                       itemBuilder: (context, index) {
-                        if (index == chatState.messages.length && chatState.isLoading) {
+                        if (index == chatState.messages.length &&
+                            chatState.isLoading) {
                           return Padding(
                             padding: const EdgeInsets.only(top: 8),
-                            child: Row(
-                              children: [
-                                CircleAvatar(
-                                  radius: 14,
-                                  backgroundColor: const Color(0xFF4F46E5).withOpacity(0.1),
-                                  child: const Icon(Icons.psychology_rounded, size: 14, color: Color(0xFF06B6D4)),
-                                ),
-                                const SizedBox(width: 8),
-                                Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                                  decoration: BoxDecoration(
-                                    color: const Color(0xFF1E293B),
-                                    borderRadius: BorderRadius.circular(20),
-                                  ),
-                                  child: const ChatTypingIndicator(),
-                                ),
-                              ],
-                            )
-                            .animate()
-                            .fadeIn(duration: 300.ms)
-                            .slideY(begin: 0.2, duration: 300.ms, curve: Curves.easeOut),
+                            child:
+                                Row(
+                                      children: [
+                                        CircleAvatar(
+                                          radius: 14,
+                                          backgroundColor: const Color(
+                                            0xFF4F46E5,
+                                          ).withOpacity(0.1),
+                                          child: const Icon(
+                                            Icons.psychology_rounded,
+                                            size: 14,
+                                            color: Color(0xFF06B6D4),
+                                          ),
+                                        ),
+                                        const SizedBox(width: 8),
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 16,
+                                            vertical: 10,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            color: const Color(0xFF1E293B),
+                                            borderRadius: BorderRadius.circular(
+                                              20,
+                                            ),
+                                          ),
+                                          child: const ChatTypingIndicator(),
+                                        ),
+                                      ],
+                                    )
+                                    .animate()
+                                    .fadeIn(duration: 300.ms)
+                                    .slideY(
+                                      begin: 0.2,
+                                      duration: 300.ms,
+                                      curve: Curves.easeOut,
+                                    ),
                           );
                         }
 
                         final message = chatState.messages[index];
                         return Padding(
                           padding: const EdgeInsets.only(bottom: 16),
-                          child: ChatMessageBubble(
-                            text: message.message,
-                            isUser: message.sender == 'user',
-                            isError: message.isError,
-                            timestamp: message.createdAt,
-                          )
-                          .animate()
-                          .slideY(
-                            begin: 0.3,
-                            end: 0,
-                            duration: 400.ms,
-                            curve: Curves.easeOut,
-                          )
-                          .fadeIn(duration: 400.ms),
+                          child:
+                              ChatMessageBubble(
+                                    text: message.message,
+                                    isUser: message.isUser,
+                                    isError: message.isError,
+                                    timestamp: message.createdAt,
+                                  )
+                                  .animate()
+                                  .slideY(
+                                    begin: 0.3,
+                                    end: 0,
+                                    duration: 400.ms,
+                                    curve: Curves.easeOut,
+                                  )
+                                  .fadeIn(duration: 400.ms),
                         );
                       },
                     ),
@@ -134,7 +167,10 @@ class _ChatbotScreenState extends ConsumerState<ChatbotScreen> {
             if (chatState.messages.isEmpty) _buildSuggestionsSection(isMobile),
 
             // Chat input
-            ChatInput(onSend: _handleSendMessage, isLoading: chatState.isLoading)
+            ChatInput(
+                  onSend: _handleSendMessage,
+                  isLoading: chatState.isLoading,
+                )
                 .animate()
                 .fadeIn(duration: 600.ms, delay: 200.ms)
                 .slideY(begin: 0.2, duration: 600.ms),

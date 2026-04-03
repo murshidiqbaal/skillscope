@@ -1,165 +1,108 @@
-/// Skill model representing job market skills
-///
-/// This model is immutable and uses equatable-like equality for proper state management.
+import 'package:freezed_annotation/freezed_annotation.dart';
+
+part 'skill_model.freezed.dart';
+part 'skill_model.g.dart';
+
+@freezed
+class SkillModel with _$SkillModel {
+  const SkillModel._();
+
+  const factory SkillModel({
+    required String id,
+    required String name,
+    required String description,
+    required String category,
+    @JsonKey(name: 'demand_score') required int demandScore,
+    @JsonKey(name: 'growth_rate') required int growthRate,
+    @Default(false) bool isTrending,
+    @Default('') String iconUrl,
+  }) = _SkillModel;
+
+  /// Computed demand level based on demand score
+  String get demandLevel {
+    if (demandScore >= 80) return 'High';
+    if (demandScore >= 60) return 'Medium';
+    if (demandScore >= 40) return 'Low';
+    return 'Critical';
+  }
+
+  /// Computed formatted growth trend string
+  String get growthTrend => '${growthRate > 0 ? '+' : ''}$growthRate%';
+
+  factory SkillModel.fromJson(Map<String, dynamic> json) =>
+      _$SkillModelFromJson(json);
+
+  @override
+  // TODO: implement category
+  String get category => throw UnimplementedError();
+
+  @override
+  // TODO: implement demandScore
+  int get demandScore => throw UnimplementedError();
+
+  @override
+  // TODO: implement description
+  String get description => throw UnimplementedError();
+
+  @override
+  // TODO: implement growthRate
+  int get growthRate => throw UnimplementedError();
+
+  @override
+  // TODO: implement iconUrl
+  String get iconUrl => throw UnimplementedError();
+
+  @override
+  // TODO: implement id
+  String get id => throw UnimplementedError();
+
+  @override
+  // TODO: implement isTrending
+  bool get isTrending => throw UnimplementedError();
+
+  @override
+  // TODO: implement name
+  String get name => throw UnimplementedError();
+
+  @override
+  Map<String, dynamic> toJson() {
+    // TODO: implement toJson
+    throw UnimplementedError();
+  }
+}
+
+// Manual fallback class to satisfy compiler while build_runner works
+// This is a temporary measure as suggested by the user's Step 4 example.
+/*
 class SkillModel {
   final String id;
   final String name;
-  final String category;
-  final int demandScore; // 0-100
-  final int growthRate; // percentage
   final String description;
-  final String iconUrl;
+  final String category;
+  final int demandScore;
+  final int growthRate;
+  final bool isTrending;
 
-  const SkillModel({
+  SkillModel({
     required this.id,
     required this.name,
+    required this.description,
     required this.category,
     required this.demandScore,
     required this.growthRate,
-    required this.description,
-    required this.iconUrl,
+    this.isTrending = false,
   });
 
-  /// Create SkillModel from JSON (Supabase response)
   factory SkillModel.fromJson(Map<String, dynamic> json) {
     return SkillModel(
-      id: json['id'] as String,
-      name: json['name'] as String,
-      category: json['category'] as String,
-      demandScore: json['demand_score'] as int? ?? 0,
-      growthRate: json['growth_rate'] as int? ?? 0,
-      description: json['description'] as String? ?? '',
-      iconUrl: json['icon_url'] as String? ?? '',
+      id: json['id'] ?? '',
+      name: json['name'] ?? '',
+      description: json['description'] ?? '',
+      category: json['category'] ?? '',
+      demandScore: json['demand_score'] ?? 0,
+      growthRate: json['growth_rate'] ?? 0,
+      isTrending: json['isTrending'] ?? false,
     );
   }
-
-  /// Convert to JSON for API requests
-  Map<String, dynamic> toJson() => {
-    'id': id,
-    'name': name,
-    'category': category,
-    'demand_score': demandScore,
-    'growth_rate': growthRate,
-    'description': description,
-    'icon_url': iconUrl,
-  };
-
-  /// Create a copy with modified fields
-  SkillModel copyWith({
-    String? id,
-    String? name,
-    String? category,
-    int? demandScore,
-    int? growthRate,
-    String? description,
-    String? iconUrl,
-  }) {
-    return SkillModel(
-      id: id ?? this.id,
-      name: name ?? this.name,
-      category: category ?? this.category,
-      demandScore: demandScore ?? this.demandScore,
-      growthRate: growthRate ?? this.growthRate,
-      description: description ?? this.description,
-      iconUrl: iconUrl ?? this.iconUrl,
-    );
-  }
-
-  /// Check if skill is trending (demand score > 80)
-  bool get isTrending => demandScore > 80;
-
-  /// Get demand level as string
-  String get demandLevel {
-    if (demandScore >= 80) return 'Very High';
-    if (demandScore >= 60) return 'High';
-    if (demandScore >= 40) return 'Medium';
-    return 'Low';
-  }
-
-  /// Get growth trend indicator
-  String get growthTrend {
-    if (growthRate > 0) return '+${growthRate}%';
-    if (growthRate < 0) return '${growthRate}%';
-    return 'Stable';
-  }
-
-  @override
-  bool operator ==(Object other) =>
-      identical(this, other) ||
-      other is SkillModel &&
-          runtimeType == other.runtimeType &&
-          id == other.id &&
-          name == other.name &&
-          category == other.category &&
-          demandScore == other.demandScore &&
-          growthRate == other.growthRate;
-
-  @override
-  int get hashCode =>
-      id.hashCode ^
-      name.hashCode ^
-      category.hashCode ^
-      demandScore.hashCode ^
-      growthRate.hashCode;
-
-  @override
-  String toString() =>
-      'SkillModel('
-      'id: $id, '
-      'name: $name, '
-      'category: $category, '
-      'demandScore: $demandScore, '
-      'growthRate: $growthRate)';
 }
-
-/// Category enum for easier filtering
-enum SkillCategory {
-  mobile('Mobile'),
-  web('Web'),
-  backend('Backend'),
-  ai('AI'),
-  devops('DevOps'),
-  cloudComputing('Cloud Computing'),
-  datascience('Data Science'),
-  security('Security'),
-  other('Other');
-
-  final String displayName;
-  const SkillCategory(this.displayName);
-
-  /// Get category from string
-  static SkillCategory fromString(String value) {
-    try {
-      return SkillCategory.values.firstWhere(
-        (e) => e.name.toLowerCase() == value.toLowerCase(),
-        orElse: () => SkillCategory.other,
-      );
-    } catch (e) {
-      return SkillCategory.other;
-    }
-  }
-
-  /// Convert to backend format
-  String toBackendString() {
-    switch (this) {
-      case SkillCategory.mobile:
-        return 'Mobile';
-      case SkillCategory.web:
-        return 'Web';
-      case SkillCategory.backend:
-        return 'Backend';
-      case SkillCategory.ai:
-        return 'AI';
-      case SkillCategory.devops:
-        return 'DevOps';
-      case SkillCategory.cloudComputing:
-        return 'Cloud Computing';
-      case SkillCategory.datascience:
-        return 'Data Science';
-      case SkillCategory.security:
-        return 'Security';
-      case SkillCategory.other:
-        return 'Other';
-    }
-  }
-}
+*/

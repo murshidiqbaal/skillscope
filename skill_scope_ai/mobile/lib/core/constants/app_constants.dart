@@ -7,7 +7,9 @@ class AppConstants {
   // ▸ USB Debugging (adb reverse) → 'http://localhost:8000'  ✅ ACTIVE
   // ▸ Android Emulator            → 'http://10.0.2.2:8000'
   // ▸ Physical Device (WiFi)      → 'http://<YOUR_PC_IP>:8000'
-  static const String fastapiBaseUrl = 'http://localhost:8000';
+  // ▸ Render.com (Production)     → 'https://skillscope-api.onrender.com'
+  static const String fastapiBaseUrl = 'https://skillscope-backend-5sw2.onrender.com';
+
 
   // Supabase (Replace with actual values or load via env)
   static const String supabaseUrl = 'https://jkgvjtnlmvvafyvmohjv.supabase.co';

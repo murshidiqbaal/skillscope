@@ -1,30 +1,38 @@
-"""
-models/chat_models.py
-Pydantic request/response models for the chat endpoints.
-"""
-
+from pydantic import BaseModel, Field
 from typing import Optional
-from pydantic import BaseModel
 
 
 class ChatRequest(BaseModel):
-    """Request body for POST /chat."""
-
-    user_id: str
-    message: str
-
-
-class ChatMessage(BaseModel):
-    """Represents a single message exchange stored in Supabase."""
-
-    id: Optional[str] = None
-    user_id: str
-    message: str
-    response: Optional[str] = None
-    created_at: Optional[str] = None
+    message: str = Field(
+        ...,
+        min_length=1,
+        max_length=2000,
+        description="The user's message or question",
+        example="What skills are needed for a Flutter developer?",
+    )
+    conversation_id: Optional[str] = Field(
+        default=None,
+        description="Optional conversation ID for tracking sessions",
+    )
 
 
 class ChatResponse(BaseModel):
-    """Response body for POST /chat."""
+    reply: str = Field(
+        ...,
+        description="The AI-generated response",
+    )
 
-    response: str
+    model: str = Field(
+        ...,
+        description="The Groq model used to generate the response",
+    )
+    conversation_id: Optional[str] = Field(
+        default=None,
+        description="Echoed conversation ID if provided",
+    )
+
+
+
+class ErrorResponse(BaseModel):
+    detail: str = Field(..., description="Human-readable error description")
+    error_type: str = Field(..., description="Category of error")
