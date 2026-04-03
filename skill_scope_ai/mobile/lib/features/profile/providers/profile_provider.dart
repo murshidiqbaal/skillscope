@@ -3,11 +3,14 @@ import 'dart:io';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mobile/features/profile/data/models/profile_model.dart';
-import 'package:mobile/features/profile/presentation/provider/profile_provider.dart';
-import 'package:riverpod/src/framework.dart';
+import 'package:mobile/features/profile/data/repositories/profile_repository.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:uuid/uuid.dart';
 
+final profileRepositoryProvider = Provider<ProfileRepository>((ref) {
+  final supabaseClient = Supabase.instance.client;
+  return ProfileRepository(client: supabaseClient);
+});
 
 final profileProvider = AsyncNotifierProvider<ProfileNotifier, Profile?>(
   () => ProfileNotifier(),
@@ -84,7 +87,11 @@ class ProfileNotifier extends AsyncNotifier<Profile?> {
           user.id,
           newImageFile,
         );
-        updatedProfile = profile.copyWith(profilePicture: imageUrl);
+        updatedProfile = profile.copyWith(
+          profilePicture: imageUrl,
+          availability: profile.availability,
+          workPreference: profile.workPreference,
+        );
       }
 
       await repository.updateProfile(updatedProfile as Profile);

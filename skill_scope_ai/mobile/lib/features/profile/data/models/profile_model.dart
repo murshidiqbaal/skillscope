@@ -14,8 +14,22 @@ class Profile {
   final String? portfolioUrl;
   final DateTime? createdAt;
   final String? email;
-
   final dynamic updatedAt;
+
+  // New Career & Background Fields
+  final String? jobTitle;
+  final String? location;
+  final String? availability;
+  final String? workPreference;
+  final String? yearsOfExperience;
+  final String? targetRole;
+  final String? salaryExpectation;
+  final String? certifications;
+  final String? spokenLanguages;
+  final String? openSourceContributions;
+  final String? achievements;
+  final String? twitterUrl;
+  final String? blogUrl;
 
   const Profile({
     this.email,
@@ -33,6 +47,19 @@ class Profile {
     this.portfolioUrl,
     this.createdAt,
     this.updatedAt,
+    this.jobTitle,
+    this.location,
+    this.availability,
+    this.workPreference,
+    this.yearsOfExperience,
+    this.targetRole,
+    this.salaryExpectation,
+    this.certifications,
+    this.spokenLanguages,
+    this.openSourceContributions,
+    this.achievements,
+    this.twitterUrl,
+    this.blogUrl,
   });
 
   factory Profile.fromJson(Map<String, dynamic> json) => Profile(
@@ -57,6 +84,19 @@ class Profile {
         ? DateTime.tryParse(json['updated_at'] as String)
         : null,
     email: json['email'] as String?,
+    jobTitle: json['job_title'] as String?,
+    location: json['location'] as String?,
+    availability: json['availability'] as String?,
+    workPreference: json['work_preference'] as String?,
+    yearsOfExperience: json['years_of_experience'] as String?,
+    targetRole: json['target_role'] as String?,
+    salaryExpectation: json['salary_expectation'] as String?,
+    certifications: json['certifications'] as String?,
+    spokenLanguages: json['spoken_languages'] as String?,
+    openSourceContributions: json['open_source_contributions'] as String?,
+    achievements: json['achievements'] as String?,
+    twitterUrl: json['twitter_url'] as String?,
+    blogUrl: json['blog_url'] as String?,
   );
 
   Map<String, dynamic> toJson() => {
@@ -74,6 +114,19 @@ class Profile {
     'portfolio_url': portfolioUrl,
     'created_at': createdAt?.toIso8601String(),
     'email': email,
+    'job_title': jobTitle,
+    'location': location,
+    'availability': availability,
+    'work_preference': workPreference,
+    'years_of_experience': yearsOfExperience,
+    'target_role': targetRole,
+    'salary_expectation': salaryExpectation,
+    'certifications': certifications,
+    'spoken_languages': spokenLanguages,
+    'open_source_contributions': openSourceContributions,
+    'achievements': achievements,
+    'twitter_url': twitterUrl,
+    'blog_url': blogUrl,
   };
 
   Profile copyWith({
@@ -91,6 +144,19 @@ class Profile {
     String? portfolioUrl,
     DateTime? createdAt,
     String? email,
+    String? jobTitle,
+    String? location,
+    String? availability,
+    String? workPreference,
+    String? yearsOfExperience,
+    String? targetRole,
+    String? salaryExpectation,
+    String? certifications,
+    String? spokenLanguages,
+    String? openSourceContributions,
+    String? achievements,
+    String? twitterUrl,
+    String? blogUrl,
   }) => Profile(
     id: id ?? this.id,
     userId: userId ?? this.userId,
@@ -106,6 +172,19 @@ class Profile {
     portfolioUrl: portfolioUrl ?? this.portfolioUrl,
     createdAt: createdAt ?? this.createdAt,
     email: email ?? this.email,
+    jobTitle: jobTitle ?? this.jobTitle,
+    location: location ?? this.location,
+    availability: availability ?? this.availability,
+    workPreference: workPreference ?? this.workPreference,
+    yearsOfExperience: yearsOfExperience ?? this.yearsOfExperience,
+    targetRole: targetRole ?? this.targetRole,
+    salaryExpectation: salaryExpectation ?? this.salaryExpectation,
+    certifications: certifications ?? this.certifications,
+    spokenLanguages: spokenLanguages ?? this.spokenLanguages,
+    openSourceContributions: openSourceContributions ?? this.openSourceContributions,
+    achievements: achievements ?? this.achievements,
+    twitterUrl: twitterUrl ?? this.twitterUrl,
+    blogUrl: blogUrl ?? this.blogUrl,
   );
 }
 
@@ -152,3 +231,4 @@ class ProfileFormModel {
     return null;
   }
 }
+

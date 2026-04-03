@@ -1,217 +1,215 @@
-// Define a simple form model for building Profile from form inputs
-class ProfileFormModel {
-  final String name;
-  final String bio;
-  final String skillsInput; // Comma-separated string
-  final String education;
-  final String experience;
-  final String projects;
-  final String githubUrl;
-  final String linkedinUrl;
-  final String portfolioUrl;
+// profile_model.dart — add these new fields to your existing Profile class
 
-  ProfileFormModel({
-    required this.name,
-    required this.bio,
-    required this.skillsInput,
-    required this.education,
-    required this.experience,
-    required this.projects,
-    required this.githubUrl,
-    required this.linkedinUrl,
-    required this.portfolioUrl,
-  });
+// ── New fields to add to your Profile class ───────────────────────────────────
+//
+// final String? jobTitle;
+// final String? location;
+// final String? availability;          // 'Available' | 'Open to Opportunities' | 'Not Available'
+// final String? workPreference;        // 'Remote' | 'Hybrid' | 'On-site'
+// final String? yearsOfExperience;
+// final String? targetRole;
+// final String? salaryExpectation;
+// final String? certifications;
+// final String? spokenLanguages;
+// final String? openSourceContributions;
+// final String? achievements;
+// final String? twitterUrl;
+// final String? blogUrl;
 
-  /// Convert form input to Profile model
-  /// Handles skills conversion from comma-separated string to array
-  Profile toProfile(String userId) {
-    // Convert comma-separated skills to array
-    final skillsList = skillsInput
-        .split(',')
-        .map((skill) => skill.trim())
-        .where((skill) => skill.isNotEmpty)
-        .toList();
+// ── Example full model (adapt to your existing one) ───────────────────────────
 
-    return Profile(
-      id: '', // Will be set by repository
-      userId: userId,
-      name: name.trim(),
-      bio: bio.trim(),
-      education: education.trim(),
-      experience: experience.trim(),
-      skills: skillsList,
-      projects: projects.trim(),
-      email: null,
-      createdAt: DateTime.now(),
-      updatedAt: DateTime.now(),
-      profilePicture: '',
-      githubUrl: githubUrl.trim(),
-      linkedinUrl: linkedinUrl.trim(),
-      portfolioUrl: portfolioUrl.trim(),
-    );
-  }
-}
-
-/// Profile model representing user profile data
-///
-/// Maps to the 'profiles' table in Supabase with:
-/// - JSONB fields: skills, education, experience, projects
-/// - UUID fields: id (FK to auth.users), user_id (FK to auth.users)
-/// - Text fields: name, bio, email
-/// - Timestamp fields: created_at, updated_at
 class Profile {
-  final String id; // Primary key, FK to auth.users
-  final String? userId; // Alternative user reference
-  final String? name;
+  final String id;
+  final String? profilePicture;
+  final String name;
+  final String? jobTitle;
   final String? bio;
-  final String? email;
-  final List<String> skills; // JSONB array
-  final String? education; // Can be JSONB array or text
-  final String? experience; // Can be JSONB array or text
-  final String? projects; // Can be JSONB array or text
-  final DateTime? createdAt;
-  final DateTime? updatedAt;
-  final String profilePicture;
+  final String? location;
+  final List<String> skills;
+
+  // Career
+  final String? availability;
+  final String? workPreference;
+  final String? yearsOfExperience;
+  final String? targetRole;
+  final String? salaryExpectation;
+
+  // Skills & Certs
+  final String? certifications;
+  final String? spokenLanguages;
+
+  // Background
+  final String? education;
+  final String? experience;
+  final String? projects;
+  final String? openSourceContributions;
+  final String? achievements;
+
+  // Links
   final String? githubUrl;
   final String? linkedinUrl;
   final String? portfolioUrl;
+  final String? twitterUrl;
+  final String? blogUrl;
 
-  Profile({
+  const Profile({
     required this.id,
-    this.userId,
-    this.name,
+    this.profilePicture,
+    required this.name,
+    this.jobTitle,
     this.bio,
-    this.email,
+    this.location,
     this.skills = const [],
+    this.availability,
+    this.workPreference,
+    this.yearsOfExperience,
+    this.targetRole,
+    this.salaryExpectation,
+    this.certifications,
+    this.spokenLanguages,
     this.education,
     this.experience,
     this.projects,
-    this.createdAt,
-    this.updatedAt,
-    required this.profilePicture,
+    this.openSourceContributions,
+    this.achievements,
     this.githubUrl,
     this.linkedinUrl,
     this.portfolioUrl,
+    this.twitterUrl,
+    this.blogUrl,
   });
 
-  /// Create Profile from Supabase JSON response
-  ///
-  /// Handles JSONB array deserialization for skills
+  // ── fromJson ────────────────────────────────────────────────────────────────
   factory Profile.fromJson(Map<String, dynamic> json) {
     return Profile(
-      id: json['id'] as String? ?? '',
-      userId: json['user_id'] as String?,
-      name: json['name'] as String?,
+      id: json['id'] as String,
+      profilePicture: json['profile_picture'] as String?,
+      name: json['name'] as String? ?? '',
+      jobTitle: json['job_title'] as String?,
       bio: json['bio'] as String?,
-      email: json['email'] as String?,
-      skills: _parseSkillsArray(json['skills']),
+      location: json['location'] as String?,
+      skills:
+          (json['skills'] as List<dynamic>?)
+              ?.map((e) => e.toString())
+              .toList() ??
+          [],
+      availability: json['availability'] as String?,
+      workPreference: json['work_preference'] as String?,
+      yearsOfExperience: json['years_of_experience'] as String?,
+      targetRole: json['target_role'] as String?,
+      salaryExpectation: json['salary_expectation'] as String?,
+      certifications: json['certifications'] as String?,
+      spokenLanguages: json['spoken_languages'] as String?,
       education: json['education'] as String?,
       experience: json['experience'] as String?,
       projects: json['projects'] as String?,
-      createdAt: json['created_at'] != null
-          ? DateTime.parse(json['created_at'] as String)
-          : null,
-      updatedAt: json['updated_at'] != null
-          ? DateTime.parse(json['updated_at'] as String)
-          : null,
-      profilePicture: '',
+      openSourceContributions: json['open_source_contributions'] as String?,
+      achievements: json['achievements'] as String?,
+      githubUrl: json['github_url'] as String?,
+      linkedinUrl: json['linkedin_url'] as String?,
+      portfolioUrl: json['portfolio_url'] as String?,
+      twitterUrl: json['twitter_url'] as String?,
+      blogUrl: json['blog_url'] as String?,
     );
   }
 
-  /// Convert Profile to JSON for Supabase insert/update
-  ///
-  /// Skills are serialized as a JSON array
-  Map<String, dynamic> toJson() {
-    return {
-      if (id.isNotEmpty) 'id': id,
-      if (userId != null) 'user_id': userId,
-      if (name != null) 'name': name,
-      if (bio != null) 'bio': bio,
-      if (email != null) 'email': email,
-      'skills': skills, // Supabase will serialize this as JSONB array
-      if (education != null) 'education': education,
-      if (experience != null) 'experience': experience,
-      if (projects != null) 'projects': projects,
-    };
-  }
+  // ── toJson ──────────────────────────────────────────────────────────────────
+  Map<String, dynamic> toJson() => {
+    'id': id,
+    'profile_picture': profilePicture,
+    'name': name,
+    'job_title': jobTitle,
+    'bio': bio,
+    'location': location,
+    'skills': skills,
+    'availability': availability,
+    'work_preference': workPreference,
+    'years_of_experience': yearsOfExperience,
+    'target_role': targetRole,
+    'salary_expectation': salaryExpectation,
+    'certifications': certifications,
+    'spoken_languages': spokenLanguages,
+    'education': education,
+    'experience': experience,
+    'projects': projects,
+    'open_source_contributions': openSourceContributions,
+    'achievements': achievements,
+    'github_url': githubUrl,
+    'linkedin_url': linkedinUrl,
+    'portfolio_url': portfolioUrl,
+    'twitter_url': twitterUrl,
+    'blog_url': blogUrl,
+  };
 
-  /// Create a copy with modified fields
+  // ── copyWith ─────────────────────────────────────────────────────────────────
   Profile copyWith({
     String? id,
-    String? userId,
+    String? profilePicture,
     String? name,
+    String? jobTitle,
     String? bio,
-    String? email,
+    String? location,
     List<String>? skills,
+    String? availability,
+    String? workPreference,
+    String? yearsOfExperience,
+    String? targetRole,
+    String? salaryExpectation,
+    String? certifications,
+    String? spokenLanguages,
     String? education,
     String? experience,
     String? projects,
-    DateTime? createdAt,
-    DateTime? updatedAt,
-    String? profilePicture,
+    String? openSourceContributions,
+    String? achievements,
     String? githubUrl,
     String? linkedinUrl,
     String? portfolioUrl,
+    String? twitterUrl,
+    String? blogUrl,
   }) {
     return Profile(
       id: id ?? this.id,
-      userId: userId ?? this.userId,
+      profilePicture: profilePicture ?? this.profilePicture,
       name: name ?? this.name,
+      jobTitle: jobTitle ?? this.jobTitle,
       bio: bio ?? this.bio,
-      email: email ?? this.email,
+      location: location ?? this.location,
       skills: skills ?? this.skills,
+      availability: availability ?? this.availability,
+      workPreference: workPreference ?? this.workPreference,
+      yearsOfExperience: yearsOfExperience ?? this.yearsOfExperience,
+      targetRole: targetRole ?? this.targetRole,
+      salaryExpectation: salaryExpectation ?? this.salaryExpectation,
+      certifications: certifications ?? this.certifications,
+      spokenLanguages: spokenLanguages ?? this.spokenLanguages,
       education: education ?? this.education,
       experience: experience ?? this.experience,
       projects: projects ?? this.projects,
-      createdAt: createdAt ?? this.createdAt,
-      updatedAt: updatedAt ?? this.updatedAt,
-      profilePicture: profilePicture ?? this.profilePicture,
+      openSourceContributions:
+          openSourceContributions ?? this.openSourceContributions,
+      achievements: achievements ?? this.achievements,
+      githubUrl: githubUrl ?? this.githubUrl,
+      linkedinUrl: linkedinUrl ?? this.linkedinUrl,
+      portfolioUrl: portfolioUrl ?? this.portfolioUrl,
+      twitterUrl: twitterUrl ?? this.twitterUrl,
+      blogUrl: blogUrl ?? this.blogUrl,
     );
   }
-
-  @override
-  String toString() => 'Profile(id: $id, name: $name, skills: $skills)';
 }
 
-/// Helper function to parse skills from various formats
-///
-/// Handles:
-/// - JSON arrays: ["Flutter", "Dart"]
-/// - Lists: [FlutterError details...] or just List<dynamic>
-/// - Strings: "Flutter,Dart" (shouldn't happen but safe guard)
-/// - Null/empty: returns empty list
-List<String> _parseSkillsArray(dynamic skillsData) {
-  if (skillsData == null) {
-    return [];
-  }
-
-  // If it's already a List
-  if (skillsData is List) {
-    return skillsData
-        .map((skill) {
-          if (skill is String) return skill;
-          if (skill is Map) return skill.toString();
-          return skill.toString();
-        })
-        .where((skill) => skill.isNotEmpty)
-        .toList();
-  }
-
-  // If it's a string (shouldn't be, but handle it)
-  if (skillsData is String) {
-    if (skillsData.isEmpty) return [];
-    return skillsData
-        .split(',')
-        .map((skill) => skill.trim())
-        .where((skill) => skill.isNotEmpty)
-        .toList();
-  }
-
-  // If it's a Map (shouldn't be, but handle it)
-  if (skillsData is Map) {
-    return [skillsData.toString()];
-  }
-
-  // Fallback
-  return [];
-}
+// ── Supabase migration SQL ────────────────────────────────────────────────────
+//
+// ALTER TABLE profiles ADD COLUMN IF NOT EXISTS job_title TEXT;
+// ALTER TABLE profiles ADD COLUMN IF NOT EXISTS location TEXT;
+// ALTER TABLE profiles ADD COLUMN IF NOT EXISTS availability TEXT DEFAULT 'Open to Opportunities';
+// ALTER TABLE profiles ADD COLUMN IF NOT EXISTS work_preference TEXT DEFAULT 'Remote';
+// ALTER TABLE profiles ADD COLUMN IF NOT EXISTS years_of_experience TEXT;
+// ALTER TABLE profiles ADD COLUMN IF NOT EXISTS target_role TEXT;
+// ALTER TABLE profiles ADD COLUMN IF NOT EXISTS salary_expectation TEXT;
+// ALTER TABLE profiles ADD COLUMN IF NOT EXISTS certifications TEXT;
+// ALTER TABLE profiles ADD COLUMN IF NOT EXISTS spoken_languages TEXT;
+// ALTER TABLE profiles ADD COLUMN IF NOT EXISTS open_source_contributions TEXT;
+// ALTER TABLE profiles ADD COLUMN IF NOT EXISTS achievements TEXT;
+// ALTER TABLE profiles ADD COLUMN IF NOT EXISTS twitter_url TEXT;
+// ALTER TABLE profiles ADD COLUMN IF NOT EXISTS blog_url TEXT;
