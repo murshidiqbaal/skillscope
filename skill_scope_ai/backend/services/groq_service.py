@@ -95,13 +95,66 @@ async def generate_chat_response(message: str) -> Dict[str, Any]:
     except Exception as e:
         _handle_exception(e)
 
+async def generate_skill_resources(skill_name: str) -> Dict[str, Any]:
+    """
+    Generate high-quality learning resources for a specific skill using Groq.
+    This generates 3-5 direct resource links for the given skill.
+    """
+    client = get_client()
+    prompt = f"""You are a master technical educator and career mentor.
+    
+    Task: Provide 3-5 high-quality, direct learning resources for the skill: {skill_name}.
+    
+    Return ONLY a perfectly formatted JSON object with this exact structure:
+    {{
+      "skill": "{skill_name}",
+      "recommendedResources": [
+        {{
+          "title": "Resource title (e.g. Flutter State Management Masterclass)",
+          "url": "VALID FULL HTTPS URL — must start with https://",
+          "description": "One sentence about why this resource is excellent for learning {skill_name}",
+          "platform": "YouTube / Coursera / Udemy / Official Docs"
+        }}
+      ]
+    }}
+    
+    STRICT URL RULES:
+    - Every url MUST start with https://
+    - Focus on primary documentation, reputable YouTube channels, and top courses.
+    - No broken links or generic search pages.
+    - DO NOT include null or placeholder URLs.
+    
+    No conversational text outside the JSON block."""
+
+    try:
+        logger.info(f"Skill resources request to Groq | skill={skill_name} | model=llama-3.1-8b-instant")
+        completion = await client.chat.completions.create(
+            model="llama-3.1-8b-instant",
+            messages=[
+                {"role": "system", "content": "You are a professional educational consultant. Always return valid JSON with direct, functional HTTPS URLs."},
+                {"role": "user", "content": prompt}
+            ],
+            temperature=0.3,
+            response_format={"type": "json_object"},
+        )
+
+        raw_content = completion.choices[0].message.content.strip()
+        parsed_data = _parse_json_safely(raw_content)
+        
+        # Sanitize and ensure structure matches
+        parsed_data = _sanitize_resources(parsed_data)
+        return parsed_data
+
+    except Exception as e:
+        _handle_exception(e)
+
 async def analyze_resume_ai(resume_text: str, job_role: str) -> Dict[str, Any]:
     """
     Analyze a resume against a job role and return structured analysis + resources.
     Standardized on llama-3.1-8b-instant.
     """
     client = get_client()
-    prompt = f"""You are an expert ATS (Applicant Tracking System) analyzer.
+    prompt = f"""You are an expert career assistant and ATS (Applicant Tracking System) analyzer.
 
 Task: Analyze the resume for the job role: {job_role}.
 
@@ -115,13 +168,24 @@ Return ONLY a perfectly formatted JSON object with this exact structure:
   "missingSkills": ["missing1", "missing2"],
   "recommendedResources": [
     {{
-      "title": "A highly relevant YouTube tutorial or Course name (e.g. Flutter State Management Masterclass)",
-      "url": "A direct valid HTTPS link to a YouTube video, Coursera, or Udemy course related specifically to the missing skill",
-      "description": "Short, punchy description of why this resource helps bridge the specific gap",
-      "platform": "YouTube / Coursera / Udemy"
+      "title": "Resource title (e.g. Flutter State Management Masterclass)",
+      "url": "VALID FULL HTTPS URL — must start with https://",
+      "description": "Short description of why this resource helps",
+      "platform": "YouTube / Coursera / Udemy / Official Docs"
     }}
   ]
 }}
+
+STRICT URL RULES — violations will cause system failure:
+- Every url MUST start with https://
+- For YouTube videos: use full watch link → https://www.youtube.com/watch?v=VIDEO_ID
+- For Coursera: https://www.coursera.org/learn/COURSE-SLUG
+- For Udemy: https://www.udemy.com/course/COURSE-SLUG/
+- For official docs: use the real documentation URL
+- DO NOT return plain text like "search on YouTube for Flutter tutorial"
+- DO NOT return https://www.youtube.com alone (homepage — invalid)
+- DO NOT return https://www.google.com alone (homepage — invalid)
+- DO NOT include null, empty, or incomplete URLs
 
 No conversational text outside the JSON block."""
 
@@ -130,20 +194,34 @@ No conversational text outside the JSON block."""
         completion = await client.chat.completions.create(
             model="llama-3.1-8b-instant",
             messages=[
-                {"role": "system", "content": "You are a professional resume auditor."},
+                {"role": "system", "content": "You are a professional resume auditor and career coach. Always return valid JSON with real, direct HTTPS URLs."},
                 {"role": "user", "content": prompt}
             ],
-            temperature=0.1, # Keep it strictly deterministic
+            temperature=0.1,  # Keep it strictly deterministic
             response_format={"type": "json_object"},
         )
-        
+
         raw_content = completion.choices[0].message.content.strip()
         parsed_data = _parse_json_safely(raw_content)
         parsed_data["model"] = completion.model
+
+        # Sanitize all resource URLs before returning — no invalid URL leaves the backend
+        parsed_data = _sanitize_resources(parsed_data)
         return parsed_data
 
     except Exception as e:
         _handle_exception(e)
+
+def _sanitize_resources(data: Dict[str, Any]) -> Dict[str, Any]:
+    """Validate and filter resources to ensure URLs are strictly HTTPS."""
+    if "recommendedResources" in data and isinstance(data["recommendedResources"], list):
+        valid_resources = []
+        for res in data["recommendedResources"]:
+            url = res.get("url", "")
+            if isinstance(url, str) and url.startswith("https://") and len(url) > 12:
+                valid_resources.append(res)
+        data["recommendedResources"] = valid_resources
+    return data
 
 def _parse_json_safely(raw_text: str) -> Dict[str, Any]:
     """Extract and parse JSON from AI string with regex fallback."""

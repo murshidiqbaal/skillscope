@@ -37,15 +37,17 @@ CREATE TABLE resources (
 );
 
 -- 4. Resume Analysis Table
-CREATE TABLE resume_analysis (
-    id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
-    user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
-    job_role TEXT NOT NULL,
-    match_score NUMERIC NOT NULL,
-    missing_skills JSONB DEFAULT '[]'::jsonb,
-    extracted_skills JSONB DEFAULT '[]'::jsonb,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
-);
+CREATE TABLE public.resume_analysis (
+    id UUID NOT NULL DEFAULT gen_random_uuid (),
+    user_id UUID NULL,
+    match_score INTEGER NOT NULL,
+    missing_skills JSONB NULL,
+    detected_skills JSONB NULL,
+    created_at TIMESTAMP WITH TIME ZONE NULL DEFAULT now(),
+    CONSTRAINT resume_analysis_pkey PRIMARY KEY (id),
+    -- Assuming references auth.users instead of users to match Supabase defaults
+    CONSTRAINT resume_analysis_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users (id) ON DELETE CASCADE
+) TABLESPACE pg_default;
 
 -- Row Level Security (RLS) configuration
 

@@ -2,6 +2,7 @@ import logging
 from typing import List
 from fastapi import APIRouter
 from models.skill_models import Skill
+from services.resource_service import get_learning_resources
 
 logger = logging.getLogger(__name__)
 
@@ -54,3 +55,22 @@ async def get_trending_skills():
     # Sort by demand score (DESC)
     sorted_skills = sorted(MOCK_SKILLS, key=lambda x: x.demand_score, reverse=True)
     return sorted_skills
+
+@router.get(
+    "/{skill_name}/resources",
+    summary="Fetch learning resources for a specific skill",
+    description="Generates dynamic learning recommendations using Groq AI."
+)
+async def get_skill_resources(skill_name: str):
+    """
+    Returns a list of learning resources for the requested skill.
+    Uses Groq to generate high-quality, direct links.
+    """
+    logger.info(f"Fetching resources for: {skill_name}")
+    try:
+        resources_data = await get_learning_resources(skill_name)
+        return resources_data
+    except Exception as e:
+        logger.error(f"Failed to generate resources for {skill_name}: {str(e)}")
+        # Fallback to empty list or static logic if needed
+        return {"skill": skill_name, "recommendedResources": []}
