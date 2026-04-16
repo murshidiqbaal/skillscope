@@ -132,10 +132,13 @@ Return ONLY a perfectly formatted JSON object with this exact structure:
 }}
 
 STRICT URL RULES:
-- Every url MUST start with https://
-- Focus on primary documentation, reputable YouTube channels, and top courses.
-- No broken links or generic search pages.
-- Do not include null or placeholder URLs.
+1. Every URL MUST start with https://
+2. TRUSTED DOMAINS: Prefer official docs (e.g., flutter.dev, dart.dev, react.dev, python.org, aws.amazon.com), YouTube.com, Coursera.org, or Udemy.com.
+3. NO HALLUCINATIONS: Do NOT guess specific sub-page paths or video IDs if you are not 100% certain.
+4. SEARCH FALLBACK: If you are unsure of a direct link, use a YouTube Search URL or Official Docs search URL. 
+   - Example YouTube Search: https://www.youtube.com/results?search_query={skill_name.replace(' ', '+')}+tutorial
+   - Example Docs Search: https://docs.flutter.dev/search?q={skill_name.replace(' ', '+')}
+5. NO BROKEN LINKS: Avoid generating random-looking strings (IDs) that might not exist.
 
 No conversational text outside the JSON block."""
 
@@ -168,17 +171,40 @@ No conversational text outside the JSON block."""
         _handle_exception(error)
 
 
-async def analyze_resume_ai(resume_text: str, job_role: str) -> Dict[str, Any]:
+async def analyze_resume_ai(
+    resume_text: str,
+    job_role: str,
+    job_description: Optional[str] = None,
+) -> Dict[str, Any]:
     """
-    Analyze a resume against a job role and return ATS-friendly structured output.
+    Analyze a resume against a job role and optional description.
+    Returns ATS-friendly structured output with accurate scoring.
     """
     client = get_client()
-    prompt = f"""You are an expert ATS (Applicant Tracking System) resume auditor and career coach.
 
-Task: Analyze this resume for the target role: {job_role}.
+    # Build context for the AI
+    requirements_context = ""
+    if job_description and job_description.strip():
+        requirements_context = f"\nSpecific Job Requirements/Description:\n{job_description}\n"
+
+    prompt = f"""You are an expert ATS (Applicant Tracking System) resume auditor and senior technical recruiter.
+
+Task: Provide a high-precision analysis of the human resume text against the target role: {job_role}.
+{requirements_context}
 
 Resume Text:
 {resume_text}
+
+Analyze the match based on skills, experience level, and the specific keywords provided in the job description (if any).
+
+Rules for Match Score Calculation:
+- **Be Rigorous**: Do not default to generic scores. A score of 85+ should only be given for near-perfect matches.
+- **Scoring Breakdown**:
+    - 0-30: Total mismatch or missing 70%+ of core requirements.
+    - 31-50: Significant gaps in skills or seniority level.
+    - 51-70: Fair match, has core skills but missing several secondary keywords.
+    - 71-85: Strong match, missing only minor specific tools or domain experience.
+    - 86-100: Exceptional candidate, matches nearly all keywords and experience levels.
 
 Return ONLY valid JSON with this exact structure:
 {{
@@ -212,7 +238,7 @@ Return ONLY valid JSON with this exact structure:
   "rewriteSuggestions": [
     "Resume bullet rewrite suggestion"
   ],
-  "summary": "2-3 sentence ATS summary",
+  "summary": "2-3 sentence ATS summary explaining exactly why this score was given.",
   "recommendedResources": [
     {{
       "title": "Resource title",
@@ -223,18 +249,24 @@ Return ONLY valid JSON with this exact structure:
   ]
 }}
 
-Rules:
+STRICT JSON RULES:
 - matchScore, atsScore, keywordCoverage must be integers 0-100.
+- No markdown, no prose, and no conversational text outside the JSON block.
 - status in atsChecks must be only pass, warn, or fail.
-- sectionScores must include at least: Summary, Experience, Skills, Projects, Education, Formatting.
-- Keep findings specific to the given resume and role.
-- Every resource URL must start with https:// and point to a direct page.
-- No markdown and no prose outside JSON."""
+
+STRICT RESOURCE URL RULES:
+1. Every URL MUST start with https://
+2. NO HALLUCINATIONS: Do NOT guess specific sub-page paths or video IDs. 
+3. SEARCH FALLBACK: If you are unsure of a direct link, use a YouTube Search URL for that skill.
+   - Format: https://www.youtube.com/results?search_query=SKILL+NAME+tutorial
+4. PREFER OFFICIAL: Use root documentation URLs if specific paths are unknown (e.g., https://docs.flutter.dev).
+"""
 
     try:
         logger.info(
-            "Resume analysis to Groq | role=%s | model=llama-3.1-8b-instant",
+            "Resume analysis to Groq | role=%s | has_desc=%s | model=llama-3.1-8b-instant",
             job_role,
+            bool(job_description),
         )
         completion = await client.chat.completions.create(
             model="llama-3.1-8b-instant",
@@ -243,12 +275,12 @@ Rules:
                     "role": "system",
                     "content": (
                         "You are a professional ATS resume auditor. "
-                        "Always return valid JSON with realistic, direct HTTPS URLs."
+                        "You provide honest, rigorous, and highly specific feedback."
                     ),
                 },
                 {"role": "user", "content": prompt},
             ],
-            temperature=0.1,
+            temperature=0.2,
             response_format={"type": "json_object"},
         )
 
@@ -263,15 +295,31 @@ Rules:
 
 
 def _sanitize_resources(data: Dict[str, Any]) -> Dict[str, Any]:
-    """Validate and filter resources to ensure URLs are strictly HTTPS."""
+    """Validate and filter resources to ensure URLs are strictly HTTPS and realistic."""
+    blacklist = ["example.com", "placeholder.com", "yourdomain.com", "test.com"]
+    
     if "recommendedResources" in data and isinstance(data["recommendedResources"], list):
         valid_resources = []
         for resource in data["recommendedResources"]:
             if not isinstance(resource, dict):
                 continue
-            url = resource.get("url", "")
-            if isinstance(url, str) and url.startswith("https://") and len(url) > 12:
-                valid_resources.append(resource)
+                
+            url = str(resource.get("url", "")).strip()
+            
+            # Basic validation
+            if not url.startswith("https://") or len(url) < 15:
+                continue
+                
+            # Blacklist check
+            if any(domain in url.lower() for domain in blacklist):
+                continue
+            
+            # Hallucination pattern check: catch URLs with placeholders like [skill]
+            if "[" in url or "{" in url:
+                continue
+                
+            valid_resources.append(resource)
+            
         data["recommendedResources"] = valid_resources
     return data
 
